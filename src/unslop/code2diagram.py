@@ -124,7 +124,19 @@ def get_overview_d2_diagram(schema_path, output_dir=None):
         raw_id = node.get("id", "")
         d2_id = raw_id
         id_map[raw_id] = d2_id
-        label = escape_label(node.get("name", raw_id))
+        label_base = node.get("name", raw_id)
+        status = (node.get("status") or "").lower()
+        status_tag = ""
+        status_stroke = ""
+        if status == "added":
+            status_tag = "[added]"
+            status_stroke = "#2E8B57"
+        elif status == "updated":
+            status_tag = "[updated]"
+            status_stroke = "#D97706"
+        if status_tag:
+            label_base = f"{label_base}\\n{status_tag}"
+        label = escape_label(label_base)
         node_type = node.get("type", "")
         tooltip = escape_label(node.get("description") or raw_id)
         fill = ""
@@ -143,6 +155,9 @@ def get_overview_d2_diagram(schema_path, output_dir=None):
         lines.append(f'{d2_id}.link: "unslop://node/{escape_label(raw_id)}"')
         if fill:
             lines.append(f'{d2_id}.style.fill: "{fill}"')
+        if status_stroke:
+            lines.append(f'{d2_id}.style.stroke: "{status_stroke}"')
+            lines.append(f'{d2_id}.style.stroke-width: 3')
 
     seen_edges = set()
     for flow in flows:
