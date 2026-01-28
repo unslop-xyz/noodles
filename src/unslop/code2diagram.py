@@ -128,12 +128,15 @@ def get_overview_d2_diagram(schema_path, output_dir=None):
         status = (node.get("status") or "").lower()
         status_tag = ""
         status_stroke = ""
+        status_font = ""
         if status == "added":
             status_tag = "[added]"
             status_stroke = "#2E8B57"
+            status_font = "#2E8B57"
         elif status == "updated":
             status_tag = "[updated]"
             status_stroke = "#D97706"
+            status_font = "#D97706"
         if status_tag:
             label_base = f"{label_base}\\n{status_tag}"
         label = escape_label(label_base)
@@ -157,7 +160,9 @@ def get_overview_d2_diagram(schema_path, output_dir=None):
             lines.append(f'{d2_id}.style.fill: "{fill}"')
         if status_stroke:
             lines.append(f'{d2_id}.style.stroke: "{status_stroke}"')
-            lines.append(f'{d2_id}.style.stroke-width: 3')
+            lines.append(f'{d2_id}.style.stroke-width: 10')
+        if status_font:
+            lines.append(f'{d2_id}.style.font-color: "{status_font}"')
 
     seen_edges = set()
     for flow in flows:
