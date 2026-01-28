@@ -130,7 +130,7 @@
         border-radius: 4px;
         background: #fff;
         font-size: 12px;
-        min-width: 220px;
+        min-width: 160px;
       }
       .api-field {
         position: relative;
@@ -186,6 +186,24 @@
         overflow: hidden;
         margin-top: 4px;
         margin-bottom: 12px;
+      }
+      #diagram-progress {
+        height: 10px;
+        border-radius: 999px;
+        background: #eceef4;
+        overflow: hidden;
+        margin: 0 6px 10px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      #diagram-progress.active {
+        opacity: 1;
+      }
+      #diagram-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #7aa2ff, #5c7cfa);
+        transition: width 0.2s ease;
       }
       #diagram-inner {
         width: 100%;
@@ -293,6 +311,9 @@
         <img id="diagram-img" alt="" />
       </div>
     </div>
+    <div id="diagram-progress" aria-hidden="true">
+      <div id="diagram-progress-bar"></div>
+    </div>
     <div id="diagram-log">
       <div id="diagram-log-timer" aria-live="off">
         <div class="diagram-log-timer-row">
@@ -319,6 +340,8 @@
       const overviewModelEl = document.getElementById('overview-model');
       const openaiKeyEl = document.getElementById('openai-key');
       const openaiKeyStatusEl = document.getElementById('openai-key-status');
+      const progressWrap = document.getElementById('diagram-progress');
+      const progressBar = document.getElementById('diagram-progress-bar');
       const loadingStates = { overview: false, node: false };
       let svgEl = null;
       let hoverTarget = null;
@@ -333,6 +356,12 @@
         overview: { start: 0, interval: null, el: null, lastElapsed: 0 },
         node: { start: 0, interval: null, el: null, lastElapsed: 0 },
       };
+      let progressTimer = null;
+      let progressValue = 0;
+      let progressPhase = 'idle';
+      let progressStart = 0;
+      let progressTargetMs = 0;
+      let progressPauseUntil = 0;
 
       let isPanning = false;
       let startX = 0;
@@ -677,8 +706,10 @@
         loadingStates[scope] = Boolean(active);
         if (loadingStates[scope]) {
           startTimer(scope);
+          if (scope === 'overview') startProgress();
         } else {
           stopTimer(scope);
+          if (scope === 'overview') markProgressWaiting();
         }
       }
 
@@ -781,19 +812,98 @@
         }
       }
 
+      function setProgress(value) {
+        if (!progressBar) return;
+        progressValue = Math.max(0, Math.min(value, 100));
+        progressBar.style.width = `${progressValue}%`;
+      }
+
+      function startProgress() {
+        if (!progressWrap || !progressBar) return;
+        progressPhase = 'running';
+        progressValue = 0;
+        progressStart = Date.now();
+        progressTargetMs = 180000 + Math.random() * 120000;
+        progressPauseUntil = 0;
+        setProgress(0);
+        progressWrap.classList.add('active');
+        if (progressTimer) clearInterval(progressTimer);
+        progressTimer = setInterval(tickProgress, 120);
+      }
+
+      function tickProgress() {
+        if (progressValue >= 90) return;
+        const now = Date.now();
+        if (now < progressPauseUntil) return;
+        if (Math.random() < 0.08) {
+          progressPauseUntil = now + 300 + Math.random() * 900;
+          return;
+        }
+        const elapsed = Math.max(0, now - progressStart);
+        const ratio = Math.min(elapsed / Math.max(progressTargetMs, 1), 1);
+        const eased = 1 - Math.pow(1 - ratio, 2);
+        let desired = 90 * eased;
+        if (progressPhase === 'waiting') {
+          desired = Math.min(desired, 88);
+        }
+        const jitter = (Math.random() - 0.5) * 1.5;
+        const nextValue = Math.min(90, Math.max(progressValue, desired + jitter));
+        setProgress(nextValue);
+      }
+
+      function markProgressWaiting() {
+        if (progressPhase === 'running') {
+          progressPhase = 'waiting';
+        }
+      }
+
+      function completeProgress() {
+        if (!progressWrap || !progressBar) return;
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+        setProgress(100);
+        setTimeout(() => {
+          resetProgress();
+        }, 350);
+      }
+
+      function resetProgress() {
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+        progressPhase = 'idle';
+        progressValue = 0;
+        if (progressWrap) {
+          progressWrap.classList.remove('active');
+        }
+        setProgress(0);
+      }
+
       function applyDiagramPayload(payload) {
         if (!payload) return;
         logMessage(payload.error || '');
+        if (payload.error) {
+          resetProgress();
+        }
         if (payload.svg_inline) {
           setDiagram(payload.svg_inline);
           resetZoom();
           currentDiagramPayload = payload;
+          if (payload.path && payload.path.endsWith('overview.d2')) {
+            completeProgress();
+          }
           return;
         }
         if (payload.svg) {
           setImage(payload.svg);
           resetZoom();
           currentDiagramPayload = payload;
+          if (payload.path && payload.path.endsWith('overview.d2')) {
+            completeProgress();
+          }
           return;
         }
         if (payload.error) {
@@ -860,10 +970,15 @@
         }
         if (payload.type === 'log') {
           logMessage(payload.message || '');
+          const msg = payload.message || '';
+          if (msg.startsWith('ERROR:') || msg.includes('OpenAI request failed')) {
+            resetProgress();
+          }
           return;
         }
         if (payload.type === 'warning') {
           logMessage(payload.message || '');
+          resetProgress();
           return;
         }
         if (payload.type === 'diagram') {
