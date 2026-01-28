@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 from openai import OpenAI
 from openai import AsyncOpenAI
 try:
@@ -11,7 +12,7 @@ except Exception:  # pragma: no cover - defensive fallback
         pass
 
 logger = logging.getLogger(__name__)
-_LAST_API_KEY_STATUS: str | None = None
+_LAST_API_KEY_STATUS: Optional[str] = None
 
 
 def _report_api_key_status(status: str) -> None:
