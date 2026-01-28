@@ -171,6 +171,12 @@ def _start_update_loop(window, ctx: _OverlayContext) -> None:
                         "active": message.get("active"),
                     }
                     _dispatch_to_window(window, payload)
+                elif message.get("type") == "api_key_status":
+                    payload = {
+                        "type": "api_key_status",
+                        "status": message.get("status"),
+                    }
+                    _dispatch_to_window(window, payload)
                 elif message.get("type") == "warning":
                     warning_text = message.get("message", "Warning")
                     payload = {
@@ -257,6 +263,52 @@ class _OverlayAPI:
             },
         )
         return {"selected": self._ctx.last_selection}
+
+    def get_openai_key(self) -> dict:
+        """Return the OpenAI API key, preferring .env if available."""
+        env_path = _resolve_env_path(self._ctx)
+        file_key = _read_env_key(env_path) if env_path else None
+        if file_key:
+            return {"key": file_key, "source": "env_file", "path": str(env_path)}
+        key = os.environ.get("OPENAI_API_KEY") or os.environ.get("UNSLOP_OPENAI_API_KEY")
+        return {"key": key or "", "source": "env_var"}
+
+    def set_openai_key(self, key: str | None) -> dict:
+        """Set the OpenAI API key for the current process environment and .env."""
+        value = (key or "").strip()
+        env_path = _resolve_env_path(self._ctx)
+        env_written = False
+        if env_path:
+            try:
+                _write_env_key(env_path, value)
+                env_written = True
+            except Exception:
+                env_written = False
+        if not value:
+            os.environ.pop("OPENAI_API_KEY", None)
+            os.environ.pop("UNSLOP_OPENAI_API_KEY", None)
+            _signal_selection(
+                self._ctx.selection_queue,
+                {"action": "set_key", "key": ""},
+            )
+            return {
+                "key": "",
+                "cleared": True,
+                "env_path": str(env_path) if env_path else "",
+                "env_written": env_written,
+            }
+        os.environ["OPENAI_API_KEY"] = value
+        os.environ["UNSLOP_OPENAI_API_KEY"] = value
+        _signal_selection(
+            self._ctx.selection_queue,
+            {"action": "set_key", "key": value},
+        )
+        return {
+            "key": value,
+            "cleared": False,
+            "env_path": str(env_path) if env_path else "",
+            "env_written": env_written,
+        }
 
     def close_overlay(self) -> dict:
         """Close the overlay window when requested by the frontend."""
@@ -443,6 +495,85 @@ def _normalize_overview_model(value: str | None) -> str:
     if isinstance(value, str) and value in allowed:
         return value
     return "gpt-4.1"
+
+
+def _resolve_env_path(ctx: _OverlayContext) -> Path | None:
+    try:
+        return Path.cwd() / ".env"
+    except Exception:
+        return None
+
+
+def _read_env_key(env_path: Path | None) -> str | None:
+    if not env_path or not env_path.is_file():
+        return None
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return None
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("export "):
+            stripped = stripped[len("export ") :].lstrip()
+        if stripped.startswith("OPENAI_API_KEY="):
+            value = stripped.split("=", 1)[1].strip()
+            return _strip_env_value(value)
+        if stripped.startswith("UNSLOP_OPENAI_API_KEY="):
+            value = stripped.split("=", 1)[1].strip()
+            return _strip_env_value(value)
+    return None
+
+
+def _strip_env_value(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
+def _write_env_key(env_path: Path, value: str) -> None:
+    existing = []
+    if env_path.is_file():
+        existing = env_path.read_text(encoding="utf-8").splitlines()
+    keys = ("OPENAI_API_KEY", "UNSLOP_OPENAI_API_KEY")
+    if not value:
+        updated = [
+            line
+            for line in existing
+            if not any(_is_env_key_line(line, key) for key in keys)
+        ]
+    else:
+        updated = existing[:]
+        for key in keys:
+            updated = _upsert_env_line(updated, key, value)
+    content = "\n".join(updated).rstrip()
+    if content:
+        content += "\n"
+    env_path.write_text(content, encoding="utf-8")
+
+
+def _upsert_env_line(lines: list[str], key: str, value: str) -> list[str]:
+    updated = []
+    replaced = False
+    for line in lines:
+        if _is_env_key_line(line, key):
+            updated.append(f"{key}={value}")
+            replaced = True
+        else:
+            updated.append(line)
+    if not replaced:
+        updated.append(f"{key}={value}")
+    return updated
+
+
+def _is_env_key_line(line: str, key: str) -> bool:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if stripped.startswith("export "):
+        stripped = stripped[len("export ") :].lstrip()
+    return stripped.startswith(f"{key}=")
         
 def _load_overlay_html() -> str:
     template_path = Path(__file__).resolve().parent / "templates" / "overlay.html"

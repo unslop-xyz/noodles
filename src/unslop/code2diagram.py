@@ -4,8 +4,39 @@ import logging
 from pathlib import Path
 from openai import OpenAI
 from openai import AsyncOpenAI
+try:
+    from openai import AuthenticationError
+except Exception:  # pragma: no cover - defensive fallback
+    class AuthenticationError(Exception):
+        pass
 
 logger = logging.getLogger(__name__)
+_LAST_API_KEY_STATUS: str | None = None
+
+
+def _report_api_key_status(status: str) -> None:
+    global _LAST_API_KEY_STATUS
+    if status == _LAST_API_KEY_STATUS:
+        return
+    _LAST_API_KEY_STATUS = status
+    logger.warning(
+        "OpenAI API key status: %s",
+        status,
+        extra={"unslop_api_key_status": status},
+    )
+
+
+def _maybe_report_auth_error(exc: Exception) -> None:
+    if isinstance(exc, AuthenticationError):
+        _report_api_key_status("invalid")
+        return
+    status_code = getattr(exc, "status_code", None)
+    if status_code == 401:
+        _report_api_key_status("invalid")
+        return
+    text = str(exc)
+    if "invalid_api_key" in text or "Incorrect API key" in text:
+        _report_api_key_status("invalid")
 
 def _overview_prompt() -> str:
     return (
@@ -47,15 +78,19 @@ def generate_overview_schema(combined, model="gpt-4.1"):
     client = OpenAI()
     prompt = _overview_prompt()
 
-    resp = client.responses.create(
-        model=model,
-        input=[
-            {"role": "system", "content": "You are a precise code analyst."},
-            {"role": "user", "content": prompt + "\n\n" + combined},
-        ],
-        text={"format": {"type": "json_object"}},
-    )
-
+    try:
+        resp = client.responses.create(
+            model=model,
+            input=[
+                {"role": "system", "content": "You are a precise code analyst."},
+                {"role": "user", "content": prompt + "\n\n" + combined},
+            ],
+            text={"format": {"type": "json_object"}},
+        )
+    except Exception as exc:
+        _maybe_report_auth_error(exc)
+        raise
+    _report_api_key_status("valid")
     return resp.output_text
 
 
@@ -77,24 +112,28 @@ def update_overview_schema(combined, model="gpt-4.1", previous_schema=""):
         " that are not affected by changes."
     )
 
-    resp = client.responses.create(
-        model=model,
-        input=[
-            {"role": "system", "content": "You are a precise code analyst."},
-            {
-                "role": "user",
-                "content": (
-                    prompt
-                    + "\n\nPREVIOUS_SCHEMA_JSON:\n"
-                    + (previous_schema or "")
-                    + "\n\nCHANGED_FILES:\n"
-                    + combined
-                ),
-            },
-        ],
-        text={"format": {"type": "json_object"}},
-    )
-
+    try:
+        resp = client.responses.create(
+            model=model,
+            input=[
+                {"role": "system", "content": "You are a precise code analyst."},
+                {
+                    "role": "user",
+                    "content": (
+                        prompt
+                        + "\n\nPREVIOUS_SCHEMA_JSON:\n"
+                        + (previous_schema or "")
+                        + "\n\nCHANGED_FILES:\n"
+                        + combined
+                    ),
+                },
+            ],
+            text={"format": {"type": "json_object"}},
+        )
+    except Exception as exc:
+        _maybe_report_auth_error(exc)
+        raise
+    _report_api_key_status("valid")
     return resp.output_text
 
 
@@ -315,14 +354,19 @@ async def generate_node_schema_and_diagram(
             " ID rules:"
             " - ids must contain only lowercase letters and underscores."
         )
-        resp = await client.responses.create(
-            model=model,
-            input=[
-                {"role": "system", "content": "You are a precise code analyst."},
-                {"role": "user", "content": prompt + "\n\nNODE CONTEXT:\n" + payload},
-            ],
-            text={"format": {"type": "json_object"}},
-        )
+        try:
+            resp = await client.responses.create(
+                model=model,
+                input=[
+                    {"role": "system", "content": "You are a precise code analyst."},
+                    {"role": "user", "content": prompt + "\n\nNODE CONTEXT:\n" + payload},
+                ],
+                text={"format": {"type": "json_object"}},
+            )
+        except Exception as exc:
+            _maybe_report_auth_error(exc)
+            raise
+        _report_api_key_status("valid")
         return {"id": node_id, "json": resp.output_text}
     
     node_contexts = extract_code_context()

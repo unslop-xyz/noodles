@@ -112,12 +112,60 @@
         font-size: 12px;
         color: #555;
       }
+      .api-label {
+        font-size: 12px;
+        color: #555;
+        margin-left: 6px;
+      }
       .model-select {
         padding: 6px 8px;
         border: 1px solid #ccc;
         border-radius: 4px;
         background: #fff;
         font-size: 12px;
+      }
+      .api-input {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+        font-size: 12px;
+        min-width: 220px;
+      }
+      .api-field {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+      .api-field .api-input {
+        padding-right: 22px;
+      }
+      .api-status {
+        position: absolute;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-left: 2px;
+        user-select: none;
+        pointer-events: none;
+        z-index: 2;
+        background: transparent;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .api-status.valid {
+        background: #2E8B57;
+      }
+      .api-status.invalid {
+        background: #C2410C;
       }
       button {
         padding: 6px 10px;
@@ -218,6 +266,11 @@
         <option value="gpt-4.1" selected>gpt-4.1</option>
         <option value="gpt-5-mini">gpt-5-mini</option>
       </select>
+      <span class="api-label">OpenAI API key</span>
+      <span class="api-field">
+        <input id="openai-key" class="api-input" type="text" placeholder="Not set" />
+        <span id="openai-key-status" class="api-status" aria-live="polite"></span>
+      </span>
       <button class="info-btn" aria-label="Help" tabindex="0">
         <span aria-hidden="true">?</span>
         <div class="info-tooltip" role="tooltip">
@@ -264,6 +317,8 @@
       const logTimerOverviewEl = document.getElementById('diagram-log-timer-overview');
       const logTimerNodeEl = document.getElementById('diagram-log-timer-node');
       const overviewModelEl = document.getElementById('overview-model');
+      const openaiKeyEl = document.getElementById('openai-key');
+      const openaiKeyStatusEl = document.getElementById('openai-key-status');
       const loadingStates = { overview: false, node: false };
       let svgEl = null;
       let hoverTarget = null;
@@ -530,9 +585,14 @@
 
       async function chooseFolder() {
         try {
+          const hasKey = await ensureOpenAIKey();
+          if (!hasKey) return;
           const res = await window.pywebview.api.choose_folder(getOverviewModel());
           if (res?.error) logMessage(res.error);
-          else if (res?.selected) logMessage(`Selected: ${res.selected}`);
+          else if (res?.selected) {
+            logMessage(`Selected: ${res.selected}`);
+            fetchOpenAIKey();
+          }
         } catch (e) {
           logMessage(String(e));
         }
@@ -626,6 +686,100 @@
       timerState.node.el = logTimerNodeEl;
       updateTimerDisplay('overview');
       updateTimerDisplay('node');
+      fetchOpenAIKey();
+      attachOpenAIKeyHandlers();
+
+      async function fetchOpenAIKey(retries = 5) {
+        if (!openaiKeyEl) return;
+        const api = window.pywebview?.api;
+        if (!api?.get_openai_key) {
+          if (retries > 0) {
+            setTimeout(() => fetchOpenAIKey(retries - 1), 300);
+          }
+          return;
+        }
+        try {
+          const res = await api.get_openai_key();
+          openaiKeyEl.value = res?.key || '';
+          setApiKeyStatus('');
+        } catch (e) {
+          openaiKeyEl.value = '';
+          setApiKeyStatus('');
+        }
+      }
+
+      async function ensureOpenAIKey() {
+        const api = window.pywebview?.api;
+        if (!api?.get_openai_key) {
+          window.alert('OpenAI API key is required to generate diagrams.');
+          return false;
+        }
+        try {
+          const res = await api.get_openai_key();
+          const key = (res?.key || '').trim();
+          if (!key) {
+            window.alert('OpenAI API key is missing. Please enter it above before choosing a folder.');
+            if (openaiKeyEl) openaiKeyEl.focus();
+            return false;
+          }
+          return true;
+        } catch (e) {
+          window.alert('OpenAI API key is missing. Please enter it above before choosing a folder.');
+          if (openaiKeyEl) openaiKeyEl.focus();
+          return false;
+        }
+      }
+
+      function attachOpenAIKeyHandlers() {
+        if (!openaiKeyEl) return;
+        openaiKeyEl.addEventListener('input', () => {
+          setApiKeyStatus('');
+        });
+        openaiKeyEl.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          saveOpenAIKey();
+        });
+        openaiKeyEl.addEventListener('blur', () => {
+          saveOpenAIKey();
+        });
+      }
+
+      async function saveOpenAIKey() {
+        const api = window.pywebview?.api;
+        if (!openaiKeyEl || !api?.set_openai_key) return;
+        const value = openaiKeyEl.value || '';
+        try {
+          const res = await api.set_openai_key(value);
+          if (res?.cleared) {
+            logMessage('OpenAI API key cleared for this session.');
+          } else if (res?.key) {
+            logMessage('OpenAI API key updated for this session.');
+          }
+          if (res?.env_written && res?.env_path) {
+            logMessage(`Saved OpenAI API key to ${res.env_path}`);
+          }
+        } catch (e) {
+          logMessage('Failed to update OpenAI API key.');
+        }
+      }
+
+      function setApiKeyStatus(status) {
+        if (!openaiKeyStatusEl) return;
+        openaiKeyStatusEl.classList.remove('valid', 'invalid');
+        if (status === 'valid') {
+          openaiKeyStatusEl.textContent = '✓';
+          openaiKeyStatusEl.setAttribute('title', 'API key valid');
+          openaiKeyStatusEl.classList.add('valid');
+        } else if (status === 'invalid') {
+          openaiKeyStatusEl.textContent = '✕';
+          openaiKeyStatusEl.setAttribute('title', 'API key invalid');
+          openaiKeyStatusEl.classList.add('invalid');
+        } else {
+          openaiKeyStatusEl.textContent = '';
+          openaiKeyStatusEl.removeAttribute('title');
+        }
+      }
 
       function applyDiagramPayload(payload) {
         if (!payload) return;
@@ -697,6 +851,11 @@
         if (!payload) return;
         if (payload.type === 'loading') {
           setLoading(payload.scope, payload.active);
+          return;
+        }
+        if (payload.type === 'api_key_status') {
+          setApiKeyStatus(payload.status || '');
+          logMessage(`API key status: ${payload.status || 'unknown'}`);
           return;
         }
         if (payload.type === 'log') {

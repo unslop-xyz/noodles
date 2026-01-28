@@ -60,6 +60,11 @@ class _OverlayLogHandler(logging.Handler):
             message = self.format(record)
             payload = {"type": "log", "message": message}
             self._updates_queue.put_nowait(payload)
+            api_key_status = record.__dict__.get("unslop_api_key_status")
+            if api_key_status:
+                self._updates_queue.put_nowait(
+                    {"type": "api_key_status", "status": api_key_status}
+                )
             loading_tag = record.__dict__.get("unslop_loading")
             if loading_tag:
                 loading_map = {
@@ -113,7 +118,6 @@ def _check_requirements() -> bool:
     if not (os.getenv("OPENAI_API_KEY") or os.getenv("UNSLOP_OPENAI_API_KEY")):
         logger.warning("Missing OpenAI API key.")
         logger.warning('Run: export OPENAI_API_KEY="your-openai-key"')
-        missing = True
     if not find_d2_bin():
         logger.warning("Missing d2 CLI.")
         logger.warning("Run: brew install d2")
@@ -155,8 +159,11 @@ def _process_folder(
     root_path = selection
     overview_model: str | None = None
     if isinstance(selection, dict):
-        root_path = selection.get("path") or ""
         action = selection.get("action") or "select"
+        if action == "set_key":
+            _apply_openai_key(selection.get("key"))
+            return
+        root_path = selection.get("path") or ""
         overview_model = selection.get("model") or None
     if not isinstance(root_path, str) or not root_path:
         logger.info("No folder selected; skipping.")
@@ -179,6 +186,18 @@ def _process_folder(
             _send_diagram(updates_queue, existing, render_image=False)
         return
     _create_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+
+
+def _apply_openai_key(value: str | None) -> None:
+    key = (value or "").strip()
+    if not key:
+        os.environ.pop("OPENAI_API_KEY", None)
+        os.environ.pop("UNSLOP_OPENAI_API_KEY", None)
+        logger.info("Cleared OpenAI API key from overlay.")
+        return
+    os.environ["OPENAI_API_KEY"] = key
+    os.environ["UNSLOP_OPENAI_API_KEY"] = key
+    logger.info("Updated OpenAI API key from overlay.")
 
 # Step 3
 def _create_manifest(
