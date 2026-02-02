@@ -135,8 +135,10 @@ def _launch_overlay_and_wait(
     multiprocessing.Queue | None,
 ]:
     """Step 1: open overlay and return an iterator of roots to process."""
+    load_dotenv(".env.local", override=True)
     logger.info("Launch overlay and wait for folder selection.")
-    overlay_queues = launch_overlay()
+    # overlay_queues = launch_overlay()
+    overlay_queues = None # Force headless mode for agent execution
     selection_queue: multiprocessing.Queue[dict | str | None] | None = None
     updates_queue: multiprocessing.Queue[dict | None] | None = None
     if overlay_queues is None:
