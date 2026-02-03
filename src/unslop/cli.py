@@ -34,10 +34,11 @@ def main(argv: List[str] | None = None) -> int:
         "run",
         help="Compare against the latest manifest and persist changes.",
     )
+    run_parser.add_argument("--headless", action="store_true", help="Run without UI overlay.")
     run_parser.set_defaults(func=_run_command)
 
     args = parser.parse_args(argv)
-    result = args.func()
+    result = args.func(args)
     return 0 if result is None else int(result)
 
 
@@ -94,11 +95,13 @@ def _attach_overlay_logger(updates_queue: multiprocessing.Queue) -> None:
     root_logger.addHandler(handler)
 
 
-def _run_command() -> int | None:
+def _run_command(args: argparse.Namespace) -> int | None:
     """Handle the ``unslop run`` command."""
     if not _check_requirements():
         return 1
-    roots, selection_queue, updates_queue = _launch_overlay_and_wait()
+    roots, selection_queue, updates_queue = _launch_overlay_and_wait(
+        headless=args.headless
+    )
     if updates_queue is not None:
         _attach_overlay_logger(updates_queue)
 
@@ -116,13 +119,18 @@ def _run_command() -> int | None:
 def _check_requirements() -> bool:
     """Ensure required dependencies are present before running."""
     missing = False
-    if not (os.getenv("OPENAI_API_KEY") or os.getenv("UNSLOP_OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")):
-        logger.warning("Missing API key (OpenAI or Gemini).")
-        logger.warning('Run: export OPENAI_API_KEY="..." OR export GEMINI_API_KEY="..."')
+    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("UNSLOP_OPENAI_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY")
+
+    if not openai_key and not gemini_key:
+        logger.warning(
+            "Missing LLM API keys. Please set OPENAI_API_KEY or GEMINI_API_KEY."
+        )
+
     if not find_d2_bin():
-        logger.warning("Missing d2 CLI.")
-        logger.warning("Run: brew install d2")
+        logger.warning("Missing d2 CLI. Run: brew install d2")
         missing = True
+
     if missing:
         logger.warning("Exiting due to missing requirements.")
         return False
@@ -130,6 +138,7 @@ def _check_requirements() -> bool:
 
 # Step 1
 def _launch_overlay_and_wait(
+    headless: bool = False,
 ) -> tuple[
     Iterator[dict[str, str] | str] | list[str],
     multiprocessing.Queue | None,
@@ -137,13 +146,19 @@ def _launch_overlay_and_wait(
 ]:
     """Step 1: open overlay and return an iterator of roots to process."""
     load_dotenv(".env.local", override=True)
-    logger.info("Launch overlay and wait for folder selection.")
-    # overlay_queues = launch_overlay()
-    overlay_queues = None # Force headless mode for agent execution
+    
+    is_headless = headless or (os.getenv("UNSLOP_HEADLESS") == "1")
+    
+    if is_headless:
+        overlay_queues = None
+    else:
+        logger.info("Launch overlay and wait for folder selection.")
+        overlay_queues = launch_overlay()
+
     selection_queue: multiprocessing.Queue[dict | str | None] | None = None
     updates_queue: multiprocessing.Queue[dict | None] | None = None
     if overlay_queues is None:
-        logger.info("Overlay unavailable; defaulting to current directory.")
+        logger.info("Overlay disabled (headless mode); defaulting to current directory.")
         roots: Iterator[str] | list[str] = [str(Path.cwd())]
     else:
         selection_queue, updates_queue = overlay_queues
@@ -176,10 +191,13 @@ def _process_folder(
     root = Path(root_path)
 
     if action == "update":
-        _update_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+        run_dir = _update_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+        if run_dir:
+            _update_diagram(root, updates_queue, output_dir=run_dir, overview_model=overview_model)
         return
     if action == "rerun":
-        _create_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+        run_dir = _create_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+        _generate_diagram(root, updates_queue, output_dir=run_dir, overview_model=overview_model)
         return
 
     existing = latest_diagram(root)
@@ -188,7 +206,8 @@ def _process_folder(
         if updates_queue is not None:
             _send_diagram(updates_queue, existing, render_image=False)
         return
-    _create_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+    run_dir = _create_manifest(root, updates_queue, verbose=True, overview_model=overview_model)
+    _generate_diagram(root, updates_queue, output_dir=run_dir, overview_model=overview_model)
 
 
 def _apply_openai_key(value: str | None) -> None:
@@ -209,7 +228,7 @@ def _create_manifest(
     *,
     verbose: bool = False,
     overview_model: str | None = None,
-) -> None:
+) -> Path:
     """Steps 3: create manifest"""
     if verbose:
         logger.info("Processing folder: %s", root)
@@ -227,14 +246,7 @@ def _create_manifest(
     manifest_path = write_manifest(root, current_entries)
     run_dir = manifest_path.parent
     logger.info("Wrote manifest: %s", manifest_path)
-    logger.info("Wrote manifest: %s", manifest_path)
-    # Generate diagram even if headless
-    _generate_diagram(
-        root,
-        updates_queue,
-        output_dir=run_dir,
-        overview_model=overview_model,
-    )
+    return run_dir
 
 # Step 3b
 def _update_manifest(
@@ -243,15 +255,14 @@ def _update_manifest(
     *,
     verbose: bool = False,
     overview_model: str | None = None,
-) -> None:
+) -> Path | None:
     """Step 3: update manifest and diagram."""
     if verbose:
         logger.info("Processing folder: %s", root)
 
     existing_diagram = latest_diagram(root)
     if existing_diagram is None:
-        _create_manifest(root, updates_queue, verbose=verbose)
-        return
+        return _create_manifest(root, updates_queue, verbose=verbose, overview_model=overview_model)
 
     logger.info("Load latest manifest in %s.", root / ".unslop")
     latest = load_latest_manifest(root)
@@ -263,20 +274,13 @@ def _update_manifest(
         logger.info("No change detected.")
         if existing_diagram:
              _send_diagram(updates_queue, existing_diagram, render_image=False)
-        return
+        return None
 
     _print_summary(summary)
     manifest_path = write_manifest(root, current_entries)
     run_dir = manifest_path.parent
     logger.info("Wrote manifest: %s", manifest_path)
-    logger.info("Wrote manifest: %s", manifest_path)
-    # Update diagram even if headless
-    _update_diagram(
-        root,
-        updates_queue,
-        output_dir=run_dir,
-        overview_model=overview_model,
-    )
+    return run_dir
 
 # Step 4
 def _generate_diagram(

@@ -166,7 +166,7 @@ def _is_hidden(relative: Path) -> bool:
     for part in relative.parts:
         if part in {"", "."}:
             continue
-        if part.startswith(".") and part not in {".unslop"}:
+        if part.startswith("."):
             return True
     return False
 
@@ -183,6 +183,7 @@ def _is_dependency_or_build(relative: Path) -> bool:
         "venv",
         ".venv",
         "target",
+        ".unslop",
     }
     for part in relative.parts:
         if part in blacklisted:

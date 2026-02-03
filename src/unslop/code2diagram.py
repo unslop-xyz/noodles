@@ -18,7 +18,7 @@ def _report_api_key_status(status: str) -> None:
         return
     _LAST_API_KEY_STATUS = status
     logger.warning(
-        "OpenAI API key status: %s",
+        "LLM API key status: %s",
         status,
         extra={"unslop_api_key_status": status},
     )
