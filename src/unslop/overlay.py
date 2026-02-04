@@ -267,10 +267,19 @@ class _OverlayAPI:
     def get_openai_key(self) -> dict:
         """Return the OpenAI API key, preferring .env if available."""
         env_path = _resolve_env_path(self._ctx)
-        file_key = _read_env_key(env_path) if env_path else None
+        file_key = _read_env_key(env_path, "openai") if env_path else None
         if file_key:
             return {"key": file_key, "source": "env_file", "path": str(env_path)}
         key = os.environ.get("OPENAI_API_KEY") or os.environ.get("UNSLOP_OPENAI_API_KEY")
+        return {"key": key or "", "source": "env_var"}
+
+    def get_gemini_key(self) -> dict:
+        """Return the Gemini API key, preferring .env if available."""
+        env_path = _resolve_env_path(self._ctx)
+        file_key = _read_env_key(env_path, "gemini") if env_path else None
+        if file_key:
+            return {"key": file_key, "source": "env_file", "path": str(env_path)}
+        key = os.environ.get("GEMINI_API_KEY")
         return {"key": key or "", "source": "env_var"}
 
     def set_openai_key(self, key: str | None) -> dict:
@@ -280,7 +289,7 @@ class _OverlayAPI:
         env_written = False
         if env_path:
             try:
-                _write_env_key(env_path, value)
+                _write_env_key(env_path, value, "openai")
                 env_written = True
             except Exception:
                 env_written = False
@@ -299,6 +308,41 @@ class _OverlayAPI:
             }
         os.environ["OPENAI_API_KEY"] = value
         os.environ["UNSLOP_OPENAI_API_KEY"] = value
+        _signal_selection(
+            self._ctx.selection_queue,
+            {"action": "set_key", "key": value},
+        )
+        return {
+            "key": value,
+            "cleared": False,
+            "env_path": str(env_path) if env_path else "",
+            "env_written": env_written,
+        }
+
+    def set_gemini_key(self, key: str | None) -> dict:
+        """Set the Gemini API key for the current process environment and .env."""
+        value = (key or "").strip()
+        env_path = _resolve_env_path(self._ctx)
+        env_written = False
+        if env_path:
+            try:
+                _write_env_key(env_path, value, "gemini")
+                env_written = True
+            except Exception:
+                env_written = False
+        if not value:
+            os.environ.pop("GEMINI_API_KEY", None)
+            _signal_selection(
+                self._ctx.selection_queue,
+                {"action": "set_key", "key": ""},
+            )
+            return {
+                "key": "",
+                "cleared": True,
+                "env_path": str(env_path) if env_path else "",
+                "env_written": env_written,
+            }
+        os.environ["GEMINI_API_KEY"] = value
         _signal_selection(
             self._ctx.selection_queue,
             {"action": "set_key", "key": value},
@@ -491,10 +535,15 @@ def _signal_selection(queue: multiprocessing.Queue | None, value: str | None) ->
             pass
 
 def _normalize_overview_model(value: str | None) -> str:
-    allowed = {"gpt-4.1", "gpt-5-mini"}
+    allowed = {"gpt-4.1", "gpt-5-mini", "gemini-2.0-flash", "gemini-2.5-pro"}
     if isinstance(value, str) and value in allowed:
         return value
     return "gpt-4.1"
+
+
+def _is_gemini_model(model: str | None) -> bool:
+    """Return True if the model is a Gemini model."""
+    return isinstance(model, str) and "gemini" in model.lower()
 
 
 def _resolve_env_path(ctx: _OverlayContext) -> Path | None:
@@ -504,25 +553,29 @@ def _resolve_env_path(ctx: _OverlayContext) -> Path | None:
         return None
 
 
-def _read_env_key(env_path: Path | None) -> str | None:
+def _read_env_key(env_path: Path | None, provider: str = "openai") -> str | None:
     if not env_path or not env_path.is_file():
         return None
     try:
         lines = env_path.read_text(encoding="utf-8").splitlines()
     except Exception:
         return None
+
+    if provider == "gemini":
+        key_names = ["GEMINI_API_KEY"]
+    else:
+        key_names = ["OPENAI_API_KEY", "UNSLOP_OPENAI_API_KEY"]
+
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         if stripped.startswith("export "):
             stripped = stripped[len("export ") :].lstrip()
-        if stripped.startswith("OPENAI_API_KEY="):
-            value = stripped.split("=", 1)[1].strip()
-            return _strip_env_value(value)
-        if stripped.startswith("UNSLOP_OPENAI_API_KEY="):
-            value = stripped.split("=", 1)[1].strip()
-            return _strip_env_value(value)
+        for key_name in key_names:
+            if stripped.startswith(f"{key_name}="):
+                value = stripped.split("=", 1)[1].strip()
+                return _strip_env_value(value)
     return None
 
 
@@ -532,11 +585,16 @@ def _strip_env_value(value: str) -> str:
     return value
 
 
-def _write_env_key(env_path: Path, value: str) -> None:
+def _write_env_key(env_path: Path, value: str, provider: str = "openai") -> None:
     existing = []
     if env_path.is_file():
         existing = env_path.read_text(encoding="utf-8").splitlines()
-    keys = ("OPENAI_API_KEY", "UNSLOP_OPENAI_API_KEY")
+
+    if provider == "gemini":
+        keys = ("GEMINI_API_KEY",)
+    else:
+        keys = ("OPENAI_API_KEY", "UNSLOP_OPENAI_API_KEY")
+
     if not value:
         updated = [
             line

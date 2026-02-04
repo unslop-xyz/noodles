@@ -145,8 +145,6 @@ def _launch_overlay_and_wait(
     multiprocessing.Queue | None,
 ]:
     """Step 1: open overlay and return an iterator of roots to process."""
-    load_dotenv(".env.local", override=True)
-    
     is_headless = headless or (os.getenv("UNSLOP_HEADLESS") == "1")
     
     if is_headless:

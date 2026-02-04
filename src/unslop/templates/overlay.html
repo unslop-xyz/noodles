@@ -280,14 +280,16 @@
       <button onclick="updateDiagram()">Update</button>
       <button onclick="rerun()">Rerun</button>
       <span class="model-label">Model</span>
-      <select id="overview-model" class="model-select" aria-label="Overview model">
+      <select id="overview-model" class="model-select" aria-label="Overview model" onchange="onModelChange()">
         <option value="gpt-4.1" selected>gpt-4.1</option>
         <option value="gpt-5-mini">gpt-5-mini</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
       </select>
-      <span class="api-label">OpenAI API key</span>
+      <span id="api-label" class="api-label">OpenAI API key</span>
       <span class="api-field">
-        <input id="openai-key" class="api-input" type="text" placeholder="Not set" />
-        <span id="openai-key-status" class="api-status" aria-live="polite"></span>
+        <input id="api-key" class="api-input" type="text" placeholder="Not set" />
+        <span id="api-key-status" class="api-status" aria-live="polite"></span>
       </span>
       <button class="info-btn" aria-label="Help" tabindex="0">
         <span aria-hidden="true">?</span>
@@ -338,8 +340,9 @@
       const logTimerOverviewEl = document.getElementById('diagram-log-timer-overview');
       const logTimerNodeEl = document.getElementById('diagram-log-timer-node');
       const overviewModelEl = document.getElementById('overview-model');
-      const openaiKeyEl = document.getElementById('openai-key');
-      const openaiKeyStatusEl = document.getElementById('openai-key-status');
+      const apiKeyEl = document.getElementById('api-key');
+      const apiLabelEl = document.getElementById('api-label');
+      const apiKeyStatusEl = document.getElementById('api-key-status');
       const progressWrap = document.getElementById('diagram-progress');
       const progressBar = document.getElementById('diagram-progress-bar');
       const loadingStates = { overview: false, node: false };
@@ -503,7 +506,6 @@
           const hit = getInteractiveGroup(event.target);
           if (hit) {
             setHoverTarget(hit.group);
-            // Hover highlight only; no status text.
           } else {
             setHoverTarget(null);
           }
@@ -612,15 +614,31 @@
         }, escDoubleThresholdMs + 20);
       });
 
+      function isGeminiModel(model) {
+        return model && model.toLowerCase().includes('gemini');
+      }
+
+      function onModelChange() {
+        const model = getOverviewModel();
+        if (isGeminiModel(model)) {
+          apiLabelEl.textContent = 'Gemini API key';
+          apiKeyEl.placeholder = 'Not set';
+        } else {
+          apiLabelEl.textContent = 'OpenAI API key';
+          apiKeyEl.placeholder = 'Not set';
+        }
+        fetchApiKey();
+      }
+
       async function chooseFolder() {
         try {
-          const hasKey = await ensureOpenAIKey();
+          const hasKey = await ensureApiKey();
           if (!hasKey) return;
           const res = await window.pywebview.api.choose_folder(getOverviewModel());
           if (res?.error) logMessage(res.error);
           else if (res?.selected) {
             logMessage(`Selected: ${res.selected}`);
-            fetchOpenAIKey();
+            fetchApiKey();
           }
         } catch (e) {
           logMessage(String(e));
@@ -717,98 +735,106 @@
       timerState.node.el = logTimerNodeEl;
       updateTimerDisplay('overview');
       updateTimerDisplay('node');
-      fetchOpenAIKey();
-      attachOpenAIKeyHandlers();
+      fetchApiKey();
+      attachApiKeyHandlers();
 
-      async function fetchOpenAIKey(retries = 5) {
-        if (!openaiKeyEl) return;
+      async function fetchApiKey(retries = 5) {
+        if (!apiKeyEl) return;
         const api = window.pywebview?.api;
-        if (!api?.get_openai_key) {
+        const model = getOverviewModel();
+        const methodName = isGeminiModel(model) ? 'get_gemini_key' : 'get_openai_key';
+        if (!api || !api[methodName]) {
           if (retries > 0) {
-            setTimeout(() => fetchOpenAIKey(retries - 1), 300);
+            setTimeout(() => fetchApiKey(retries - 1), 300);
           }
           return;
         }
         try {
-          const res = await api.get_openai_key();
-          openaiKeyEl.value = res?.key || '';
+          const res = await api[methodName]();
+          apiKeyEl.value = res?.key || '';
           setApiKeyStatus('');
         } catch (e) {
-          openaiKeyEl.value = '';
+          apiKeyEl.value = '';
           setApiKeyStatus('');
         }
       }
 
-      async function ensureOpenAIKey() {
+      async function ensureApiKey() {
         const api = window.pywebview?.api;
-        if (!api?.get_openai_key) {
-          window.alert('OpenAI API key is required to generate diagrams.');
+        const model = getOverviewModel();
+        const methodName = isGeminiModel(model) ? 'get_gemini_key' : 'get_openai_key';
+        const keyName = isGeminiModel(model) ? 'Gemini' : 'OpenAI';
+        if (!api || !api[methodName]) {
+          window.alert(`${keyName} API key is required to generate diagrams.`);
           return false;
         }
         try {
-          const res = await api.get_openai_key();
+          const res = await api[methodName]();
           const key = (res?.key || '').trim();
           if (!key) {
-            window.alert('OpenAI API key is missing. Please enter it above before choosing a folder.');
-            if (openaiKeyEl) openaiKeyEl.focus();
+            window.alert(`${keyName} API key is missing. Please enter it above before choosing a folder.`);
+            if (apiKeyEl) apiKeyEl.focus();
             return false;
           }
           return true;
         } catch (e) {
-          window.alert('OpenAI API key is missing. Please enter it above before choosing a folder.');
-          if (openaiKeyEl) openaiKeyEl.focus();
+          window.alert(`${keyName} API key is missing. Please enter it above before choosing a folder.`);
+          if (apiKeyEl) apiKeyEl.focus();
           return false;
         }
       }
 
-      function attachOpenAIKeyHandlers() {
-        if (!openaiKeyEl) return;
-        openaiKeyEl.addEventListener('input', () => {
+      function attachApiKeyHandlers() {
+        if (!apiKeyEl) return;
+        apiKeyEl.addEventListener('input', () => {
           setApiKeyStatus('');
         });
-        openaiKeyEl.addEventListener('keydown', (event) => {
+        apiKeyEl.addEventListener('keydown', (event) => {
           if (event.key !== 'Enter') return;
           event.preventDefault();
-          saveOpenAIKey();
+          saveApiKey();
         });
-        openaiKeyEl.addEventListener('blur', () => {
-          saveOpenAIKey();
+        apiKeyEl.addEventListener('blur', () => {
+          saveApiKey();
         });
       }
 
-      async function saveOpenAIKey() {
+      async function saveApiKey() {
         const api = window.pywebview?.api;
-        if (!openaiKeyEl || !api?.set_openai_key) return;
-        const value = openaiKeyEl.value || '';
+        const model = getOverviewModel();
+        const methodName = isGeminiModel(model) ? 'set_gemini_key' : 'set_openai_key';
+        const keyName = isGeminiModel(model) ? 'Gemini' : 'OpenAI';
+        if (!apiKeyEl || !api || !api[methodName]) return;
+        const value = apiKeyEl.value || '';
         try {
-          const res = await api.set_openai_key(value);
+          const res = await api[methodName](value);
           if (res?.cleared) {
-            logMessage('OpenAI API key cleared for this session.');
+            logMessage(`${keyName} API key cleared for this session.`);
           } else if (res?.key) {
-            logMessage('OpenAI API key updated for this session.');
+            logMessage(`${keyName} API key updated for this session.`);
           }
           if (res?.env_written && res?.env_path) {
-            logMessage(`Saved OpenAI API key to ${res.env_path}`);
+            logMessage(`Saved ${keyName} API key to ${res.env_path}`);
           }
         } catch (e) {
-          logMessage('Failed to update OpenAI API key.');
+          logMessage(`Failed to update ${keyName} API key.`);
         }
       }
 
       function setApiKeyStatus(status) {
-        if (!openaiKeyStatusEl) return;
-        openaiKeyStatusEl.classList.remove('valid', 'invalid');
+        if (!apiKeyStatusEl) return;
+        apiKeyStatusEl.classList.remove('valid', 'invalid');
         if (status === 'valid') {
-          openaiKeyStatusEl.textContent = '✓';
-          openaiKeyStatusEl.setAttribute('title', 'API key valid');
-          openaiKeyStatusEl.classList.add('valid');
+          apiKeyStatusEl.textContent = '✓';
+          apiKeyStatusEl.setAttribute('title', 'API key valid');
+          apiKeyStatusEl.classList.add('valid');
         } else if (status === 'invalid') {
-          openaiKeyStatusEl.textContent = '✕';
-          openaiKeyStatusEl.setAttribute('title', 'API key invalid');
-          openaiKeyStatusEl.classList.add('invalid');
+          apiKeyStatusEl.textContent = '✕';
+          apiKeyStatusEl.setAttribute('title', 'API key invalid');
+          apiKeyStatusEl.classList.add('invalid');
         } else {
-          openaiKeyStatusEl.textContent = '';
-          openaiKeyStatusEl.removeAttribute('title');
+          apiKeyStatusEl.textContent = '';
+          apiKeyStatusEl.removeAttribute('title');
         }
       }
 
@@ -956,7 +982,7 @@
         const prev = diagramHistory.pop();
         applyDiagramPayload(prev);
       }
-      
+
       window.__unslopUpdate = (payload) => {
         if (!payload) return;
         if (payload.type === 'loading') {
