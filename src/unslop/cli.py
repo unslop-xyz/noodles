@@ -272,8 +272,8 @@ def _update_manifest(
 
     if not _has_changes(summary):
         logger.info("No change detected.")
-        if existing_diagram:
-             _send_diagram(updates_queue, existing_diagram, render_image=False)
+        if existing_diagram and updates_queue is not None:
+            _send_diagram(updates_queue, existing_diagram, render_image=False)
         return None
 
     _print_summary(summary)

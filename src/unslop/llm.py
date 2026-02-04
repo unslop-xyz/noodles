@@ -20,26 +20,26 @@ class OpenAIClient:
         self.async_client = AsyncOpenAI()
 
     def generate(self, system_prompt: str, user_prompt: str, json_format: bool = False) -> str:
-        response = self.client.chat.completions.create(
+        response = self.client.responses.create(
             model=self.model,
-            messages=[
+            input=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"} if json_format else None
+            text={"format": {"type": "json_object"}} if json_format else None
         )
-        return response.choices[0].message.content
+        return response.output_text
 
     async def generate_async(self, system_prompt: str, user_prompt: str, json_format: bool = False) -> str:
-        response = await self.async_client.chat.completions.create(
+        response = await self.async_client.responses.create(
             model=self.model,
-            messages=[
+            input=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"} if json_format else None
+            text={"format": {"type": "json_object"}} if json_format else None
         )
-        return response.choices[0].message.content
+        return response.output_text
 
 def _clean_json(text: str) -> str:
     # Remove markdown code blocks if present
@@ -98,4 +98,4 @@ def get_llm_client(model: Optional[str] = None) -> LLMClient:
                  gemini_model = "gemini-2.0-flash"
         return GeminiClient(gemini_model)
     
-    return OpenAIClient(model or "gpt-4o")
+    return OpenAIClient(model or "gpt-4.1")
