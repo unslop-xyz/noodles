@@ -3,11 +3,15 @@ import json
 import subprocess
 import sys
 import uuid
+import webbrowser
 from pathlib import Path
 
 from call_graph_builder.call_graph_builder import build_call_graph
 from diagram_builder.diagram_builder import build_diagrams
 from full_graph_builder.full_graph_builder import build_full_graph
+
+NOODLES_ROOT = Path(__file__).parents[2]
+sys.path.insert(0, str(NOODLES_ROOT))
 
 AGENT_DIR = Path(__file__).parent
 TEST_DIR = AGENT_DIR.parents[1] / "test"
@@ -108,12 +112,31 @@ def _clone_repo(repo_url: str, dest: Path) -> bool:
     return True
 
 
+def launch_viewer(result_dir: Path) -> None:
+    """Start the viewer server and open the browser."""
+    from viewer.data_loader import load_result
+    from viewer.server import start_server
+
+    data = load_result(str(result_dir))
+    server = start_server(data, port=0)
+    host, port = server.server_address
+    url = f"http://{host}:{port}"
+    print(f"Viewer running at {url}")
+    webbrowser.open(url)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down viewer.")
+        server.shutdown()
+
+
 async def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
     if len(args) < 1:
         print(
-            f"Usage: {sys.argv[0]} [--output-dir <dir>] <repo-url>",
+            f"Usage: {sys.argv[0]} [--output-dir <dir>] [--no-view] <repo-url>",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -124,12 +147,17 @@ async def main() -> None:
         if idx + 1 < len(sys.argv):
             output_dir = Path(sys.argv[idx + 1])
 
+    no_view = "--no-view" in sys.argv
+
     repo_url = args[0]
     result = await analyze_repo(repo_url, output_dir=output_dir)
     if result is None:
         sys.exit(1)
 
     print(f"\nResult saved to: {result}")
+
+    if not no_view:
+        launch_viewer(result)
 
 
 if __name__ == "__main__":
