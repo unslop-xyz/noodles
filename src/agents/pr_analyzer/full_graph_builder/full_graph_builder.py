@@ -9,8 +9,13 @@ from pathlib import Path
 AGENTS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(AGENTS_DIR))
 
+# changes_builder lives under this directory (full_graph_builder/changes_builder/).
+FULL_GRAPH_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(FULL_GRAPH_DIR))
+
 from node_builder.node_builder import run_node_builder_for_file
 from edge_builder.edge_builder import run_edge_builder_for_caller
+from changes_builder.changes_builder import run_changes_builder_for_file
 
 MAX_CONCURRENT_AGENTS = 20
 
@@ -131,6 +136,38 @@ async def build_full_graph(
 
     e_ok = sum(1 for r in edge_results if isinstance(r, dict) and r.get("success"))
     print(f"\n  Edges done: {e_ok}/{total_edge_tasks} callers enriched.")
+
+    # -- Phase 3: Changes builders (updated nodes only, batched by file) -----
+    updated_by_file: dict[str, list[dict]] = defaultdict(list)
+    for node in nodes:
+        if node.get("status") == "updated" and node.get("base_source"):
+            updated_by_file[_file_from_id(node["id"])].append(node)
+
+    total_changes_tasks = len(updated_by_file)
+    if total_changes_tasks:
+        print(f"Describing changes for {sum(len(v) for v in updated_by_file.values())} updated nodes across {total_changes_tasks} files ...")
+
+        changes_semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
+        changes_done = {"count": 0}
+
+        async def _run_changes(fp, file_nodes):
+            async with changes_semaphore:
+                result = await run_changes_builder_for_file(file_path=fp, nodes=file_nodes)
+            changes_done["count"] += 1
+            _print_progress("Changes", changes_done["count"], total_changes_tasks)
+            return result
+
+        changes_tasks = [
+            _run_changes(fp, file_nodes)
+            for fp, file_nodes in updated_by_file.items()
+        ]
+        changes_results = await asyncio.gather(*changes_tasks, return_exceptions=True)
+        _write_consolidated_log(output_dir / "changes_builder.log", changes_results, "changes_builder")
+
+        c_ok = sum(1 for r in changes_results if isinstance(r, dict) and r.get("success"))
+        print(f"\n  Changes done: {c_ok}/{total_changes_tasks} files described.")
+    else:
+        print("  No updated nodes to describe changes for.")
 
     return call_graph
 

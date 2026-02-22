@@ -72,6 +72,7 @@ async def analyze_pr(
     # Step 4: Save results (strip source code from nodes to keep output clean)
     for node in call_graph["nodes"]:
         node.pop("source", None)
+        node.pop("base_source", None)
     call_graph_file = result_dir / "call_graph.json"
     call_graph_file.write_text(json.dumps(call_graph, indent=2))
     print(f"  Call graph:    {call_graph_file} ({len(call_graph['nodes'])} functions, {len(call_graph['edges'])} edges)")

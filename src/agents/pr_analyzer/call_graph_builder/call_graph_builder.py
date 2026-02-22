@@ -51,7 +51,7 @@ def build_pr_call_graph(
     """
     # Step 1: Classify functions by comparing base and head
     print("  Classifying functions ...")
-    classification = _classify_functions(base_path, head_path, changed_files)
+    classification, base_funcs = _classify_functions(base_path, head_path, changed_files)
     print(
         f"    new={len(classification.new)}, "
         f"updated={len(classification.updated)}, "
@@ -76,6 +76,11 @@ def build_pr_call_graph(
         f"{len(pruned_graph['edges'])} edges retained"
     )
 
+    # Attach base source to updated nodes for change description
+    for node in pruned_graph["nodes"]:
+        if node["status"] == "updated":
+            node["base_source"] = base_funcs.get(node["id"], "")
+
     return pruned_graph, start_points, end_points, orphans, classification
 
 
@@ -83,10 +88,13 @@ def _classify_functions(
     base_path: Path,
     head_path: Path,
     changed_files: list[str] | None = None,
-) -> FunctionClassification:
+) -> tuple[FunctionClassification, dict[str, str]]:
     """Compare function sets between base and head to classify changes.
 
     Parses both branches with tree-sitter and compares function IDs and source.
+
+    Returns:
+        (classification, base_funcs) where base_funcs maps func_id -> source text.
     """
     # Build function map for HEAD (all files - needed for call graph)
     head_funcs = _build_function_map(head_path)
@@ -109,7 +117,7 @@ def _classify_functions(
         else:
             classification.unchanged.add(func_id)
 
-    return classification
+    return classification, base_funcs
 
 
 def _build_function_map(
