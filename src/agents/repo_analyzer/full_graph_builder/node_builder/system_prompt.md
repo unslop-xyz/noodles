@@ -9,7 +9,8 @@ Name guidelines:
 - Do NOT use the function name as the display name. The function name is already known; repeating it adds no value.
 - The name should describe what the function DOES in the execution flow, in plain English.
 - Keep it short (2-5 words), clear, and easy to understand at a glance.
-- Good examples: "Build API response", "Click open button", "Fetch remote config", "Render overview SVG"
+- If a function has type "start_point", its name MUST end with "entry point". The words before "entry point" should describe the PURPOSE of the entry point, not just the mechanism. (e.g., "Repo analysis entry point", "Graph export entry point", "User auth entry point").
+- Good examples: "Build API response", "Click open button", "Fetch remote config", "Render overview SVG", "Repo analysis entry point"
 - Bad examples: "run_command", "_process_folder", "generate_manifest" (these are just function names)
 
 Tag guidelines:

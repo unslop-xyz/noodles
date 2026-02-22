@@ -99,7 +99,6 @@ def _apply_results(
         agent_is_returned = entry.get("is_returned", False)
         edge["is_returned"] = edge.get("is_returned", True) or agent_is_returned
         edge["condition"] = entry.get("condition")
-        edge["index"] = entry.get("index", 0)
         completed += 1
 
     return completed, errors
@@ -136,7 +135,7 @@ async def run_edge_builder_for_caller(
         edges: List of edge dicts (each has "from" and "to" keys).
         node_index: Mapping of node ID to node dict (to look up callee source).
 
-    Applies results (label, description, args, is_returned, condition, index)
+    Applies results (label, description, args, is_returned, condition)
     directly to each edge dict.
 
     Returns a dict with log lines and stats for consolidated logging.

@@ -36,7 +36,8 @@ def _build_prompt(file_path: str, nodes: list[dict]) -> str:
     for i, node in enumerate(nodes, 1):
         func_name = node["id"].split("::")[-1]
         source = node.get("source", "")
-        parts.append(f"### {i}. `{func_name}`\n```\n{source}\n```\n")
+        node_type = node.get("type", "process")
+        parts.append(f"### {i}. `{func_name}` (type: {node_type})\n```\n{source}\n```\n")
     return "\n".join(parts)
 
 

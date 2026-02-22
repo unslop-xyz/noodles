@@ -92,15 +92,16 @@ def build_call_graph(
     # Phase 2: Build call graph
     call_graph_map: dict[str, list[str]] = {}
     is_returned_map: dict[tuple[str, str], bool] = {}
+    call_row_map: dict[tuple[str, str], int] = {}
 
     for index, (file_path, func_node) in func_defs.items():
         lang = EXTENSION_TO_LANG[file_path.suffix]
         rel_path = str(file_path.relative_to(repo_path))
 
         call_info = _get_direct_calls(func_node, lang)
-        connections: dict[str, bool] = {}
+        connections: dict[str, tuple[bool, int]] = {}
 
-        for call_name, is_returned in call_info.items():
+        for call_name, (is_returned, row) in call_info.items():
             if call_name not in name_to_indices:
                 continue
             candidates = name_to_indices[call_name]
@@ -109,15 +110,17 @@ def build_call_graph(
             matched = same_file if same_file else candidates
             for callee_idx in matched:
                 if callee_idx in connections:
-                    connections[callee_idx] = connections[callee_idx] or is_returned
+                    prev_is_ret, prev_row = connections[callee_idx]
+                    connections[callee_idx] = (prev_is_ret or is_returned, min(prev_row, row))
                 else:
-                    connections[callee_idx] = is_returned
+                    connections[callee_idx] = (is_returned, row)
 
         # Remove self-references
         connections.pop(index, None)
         call_graph_map[index] = sorted(connections.keys())
-        for callee_idx, is_ret in connections.items():
+        for callee_idx, (is_ret, row) in connections.items():
             is_returned_map[(index, callee_idx)] = is_ret
+            call_row_map[(index, callee_idx)] = row
 
     # Phase 3: Compute callers (reverse map) and classify each function
     callers_map: dict[str, list[str]] = defaultdict(list)
@@ -152,11 +155,14 @@ def build_call_graph(
         source_code = func_defs[idx][1].text.decode("utf-8") if idx in func_defs else ""
         nodes.append({"id": idx, "type": node_type, "callers": callers, "callees": callees, "source": source_code})
 
-        for callee_idx in callees:
+        # Sort callees by their row position in the caller, then assign index
+        sorted_callees = sorted(callees, key=lambda c: call_row_map.get((idx, c), 0))
+        for seq, callee_idx in enumerate(sorted_callees):
             edges.append({
                 "from": idx,
                 "to": callee_idx,
                 "is_returned": is_returned_map.get((idx, callee_idx), True),
+                "index": seq,
             })
 
     call_graph = {"nodes": nodes, "edges": edges}
@@ -266,13 +272,14 @@ def _walk_for_funcs(
         _walk_for_funcs(child, lang, results, class_stack)
 
 
-def _get_direct_calls(func_node: Node, lang: str) -> dict[str, bool]:
-    """Get all function call names with is_returned flag.
+def _get_direct_calls(func_node: Node, lang: str) -> dict[str, tuple[bool, int]]:
+    """Get all function call names with is_returned flag and row position.
 
-    Returns dict mapping call name to is_returned. If the same function is called
-    multiple times, is_returned is True if any call's return value is used.
+    Returns dict mapping call name to (is_returned, row). If the same function
+    is called multiple times, is_returned is True if any call's return value is
+    used, and row is the position of the earliest call.
     """
-    calls: list[tuple[str, bool]] = []
+    calls: list[tuple[str, bool, int]] = []
     body = func_node.child_by_field_name("body")
     if body is None:
         # For arrow functions with expression body, the body is the expression
@@ -281,12 +288,13 @@ def _get_direct_calls(func_node: Node, lang: str) -> dict[str, bool]:
                 _collect_calls(child, calls, lang)
     else:
         _collect_calls(body, calls, lang)
-    result: dict[str, bool] = {}
-    for name, is_ret in calls:
+    result: dict[str, tuple[bool, int]] = {}
+    for name, is_ret, row in calls:
         if name in result:
-            result[name] = result[name] or is_ret
+            prev_is_ret, prev_row = result[name]
+            result[name] = (prev_is_ret or is_ret, min(prev_row, row))
         else:
-            result[name] = is_ret
+            result[name] = (is_ret, row)
     return result
 
 
@@ -310,7 +318,8 @@ def _collect_calls(node: Node, calls: list, lang: str) -> None:
         if name:
             # Parent is expression_statement → fire-and-forget (is_returned=False)
             is_returned = not (node.parent and node.parent.type == "expression_statement")
-            calls.append((name, is_returned))
+            row = node.start_point[0]
+            calls.append((name, is_returned, row))
 
     for child in node.children:
         _collect_calls(child, calls, lang)
