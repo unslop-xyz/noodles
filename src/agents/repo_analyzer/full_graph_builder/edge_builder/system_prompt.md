@@ -22,3 +22,5 @@ Field definitions:
 - is_returned: whether the caller returns or uses the return value
 - condition: condition under which this call happens (null if unconditional)
 - index: the sequence order of the call within the caller function (0-based, top-to-bottom). Two calls may share the same index if they appear in the same expression or line.
+
+NOTE: You are meant to be a fast agent that returns output as quickly as possible.

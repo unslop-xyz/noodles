@@ -1,0 +1,31 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_bot_github_auth_py_generate_jwt(["Create GitHub App JWT"]):::transparent
+    agents_pr_analyzer_bot_github_auth_py_get_installation_token["Fetch installation access token"]:::transparent
+    agents_pr_analyzer_bot_github_client_py_auth_headers(["Build auth headers"]):::transparent
+    agents_pr_analyzer_bot_github_client_py_delete_comment["Delete comment"]:::transparent
+    agents_pr_analyzer_bot_github_client_py_has_write_permission["Check write permission"]:::transparent
+    agents_pr_analyzer_bot_github_client_py_post_pr_comment["Post PR comment"]:::transparent
+    agents_pr_analyzer_bot_handler_py_handle_webhook["Process webhook and trigger analysis"]:::transparent
+    agents_pr_analyzer_bot_handler_py_verify_signature(["Validate webhook signature"]):::transparent
+    agents_pr_analyzer_bot_secrets_py_get_github_app_secrets(["Fetch GitHub App secrets"]):::transparent
+    agents_pr_analyzer_bot_supabase_client_py_headers(["Format API headers"]):::transparent
+    agents_pr_analyzer_bot_supabase_client_py_create_analysis["Create new analysis record"]:::transparent
+    agents_pr_analyzer_bot_supabase_client_py_get_supabase_user_id["Look up user ID by GitHub ID"]:::transparent
+    agents_pr_analyzer_bot_github_auth_py_get_installation_token -.->|"generate JWT"| agents_pr_analyzer_bot_github_auth_py_generate_jwt
+    agents_pr_analyzer_bot_github_client_py_delete_comment -.->|"construct auth headers"| agents_pr_analyzer_bot_github_client_py_auth_headers
+    agents_pr_analyzer_bot_github_client_py_has_write_permission -.->|"get auth headers"| agents_pr_analyzer_bot_github_client_py_auth_headers
+    agents_pr_analyzer_bot_github_client_py_post_pr_comment -.->|"build auth headers"| agents_pr_analyzer_bot_github_client_py_auth_headers
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"get installation token"| agents_pr_analyzer_bot_github_auth_py_get_installation_token
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"delete comment"| agents_pr_analyzer_bot_github_client_py_delete_comment
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"has write permission"| agents_pr_analyzer_bot_github_client_py_has_write_permission
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"post pr comment"| agents_pr_analyzer_bot_github_client_py_post_pr_comment
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"verify webhook signature"| agents_pr_analyzer_bot_handler_py_verify_signature
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"fetch app secrets"| agents_pr_analyzer_bot_secrets_py_get_github_app_secrets
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"create analysis"| agents_pr_analyzer_bot_supabase_client_py_create_analysis
+    agents_pr_analyzer_bot_handler_py_handle_webhook -.->|"get supabase user id"| agents_pr_analyzer_bot_supabase_client_py_get_supabase_user_id
+    agents_pr_analyzer_bot_supabase_client_py_create_analysis -.->|"fetch app secrets"| agents_pr_analyzer_bot_secrets_py_get_github_app_secrets
+    agents_pr_analyzer_bot_supabase_client_py_create_analysis -.->|"build auth headers"| agents_pr_analyzer_bot_supabase_client_py_headers
+    agents_pr_analyzer_bot_supabase_client_py_get_supabase_user_id -.->|"fetch secrets"| agents_pr_analyzer_bot_secrets_py_get_github_app_secrets
+    agents_pr_analyzer_bot_supabase_client_py_get_supabase_user_id -.->|"build headers"| agents_pr_analyzer_bot_supabase_client_py_headers

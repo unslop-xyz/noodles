@@ -1,0 +1,6 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_bot_secrets_py_get_github_app_secrets(["Fetch GitHub App secrets"]):::transparent
+    agents_pr_analyzer_bot_supabase_client_py_upload_analysis_files["Upload results to storage"]:::transparent
+    agents_pr_analyzer_bot_supabase_client_py_upload_analysis_files -.->|"fetch GitHub secrets"| agents_pr_analyzer_bot_secrets_py_get_github_app_secrets

@@ -22,6 +22,7 @@ dependencies = [
   "pathspec>=0.12.1",
   "pywebview>=4.3.2",
   "python-dotenv>=1.0.0",
+  "tree-sitter-language-pack>=0.13.0",
 ]
 
 [project.optional-dependencies]

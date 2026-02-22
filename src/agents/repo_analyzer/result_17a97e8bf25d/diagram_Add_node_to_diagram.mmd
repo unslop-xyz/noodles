@@ -1,0 +1,8 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_sanitize_d2_text(["Sanitize text for d2 labels"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_sanitize_id(["Convert name to valid d2 identifier"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_add_node_tool("Add node to diagram"):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_add_node_tool -.->|"escape description"| agents_pr_analyzer_diagram_generator_diagram_generator_py_sanitize_d2_text
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_add_node_tool -.->|"create identifier"| agents_pr_analyzer_diagram_generator_diagram_generator_py_sanitize_id

@@ -1,0 +1,934 @@
+=== edge_builder Summary ===
+Total: 43 | Success: 43 | Failed: 0
+Duration: 6837251ms | Cost: $1.4324
+==================================================
+
+=== agents/integration_points_finder/integration_points_finder.py::find_integration_points ===
+```json
+[
+  {
+    "id": 1,
+    "label": "load system prompt",
+    "description": "Loads the system prompt markdown file",
+    "args": "system_prompt.md",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 1,
+    "label": "load prompt template",
+    "description": "Loads the prompt template markdown file",
+    "args": "prompt.md",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 2,
+    "label": "summarize tool input",
+    "description": "Creates a concise summary of tool input for logging",
+    "args": "block.input",
+    "is_returned": true,
+    "condition": "isinstance(block, ToolUseBlock)",
+    "index": 2
+  },
+  {
+    "id": 3,
+    "label": "write debug files",
+    "description": "Writes debug log files and metadata to disk",
+    "args": "timestamp, log_full, log_short, result_text, message, wall_time",
+    "is_returned": false,
+    "condition": "if debug",
+    "index": 3
+  }
+]
+```
+Applied 3/3 edges
+  [1 turns, 78760ms, $0.0594]
+
+=== agents/integration_points_finder/integration_points_finder.py::main ===
+```json
+[
+  {
+    "id": 1,
+    "label": "find integration points",
+    "description": "Asynchronously finds integration points in the specified project",
+    "args": "args[0], debug=debug",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 58406ms, $0.0388]
+
+=== agents/pr_analyzer/bot/github_auth.py::get_installation_token ===
+```json
+[
+  {
+    "id": 1,
+    "label": "generate JWT",
+    "description": "Generate short-lived JWT for GitHub App authentication using app ID and private key",
+    "args": "app_id, pem",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 36896ms, $0.0220]
+
+=== agents/pr_analyzer/bot/github_client.py::add_reaction ===
+```json
+[
+  {
+    "id": 1,
+    "label": "generate auth headers",
+    "description": "Generate authorization headers with the provided token",
+    "args": "token",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 25986ms, $0.0103]
+
+=== agents/pr_analyzer/bot/github_client.py::delete_comment ===
+```json
+[
+  {"id": 1, "label": "construct auth headers", "description": "Creates authentication headers by combining base headers with an authorization token", "args": "token", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 24410ms, $0.0130]
+
+=== agents/pr_analyzer/bot/github_client.py::has_write_permission ===
+```json
+[
+  {"id": 1, "label": "get auth headers", "description": "Generates authentication headers with the provided token", "args": "token", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 150443ms, $0.0083]
+
+=== agents/pr_analyzer/bot/github_client.py::post_pr_comment ===
+```json
+[
+  {"id": 1, "label": "build auth headers", "description": "generates authorization headers with the provided token for the API request", "args": "token", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 154054ms, $0.0120]
+
+=== agents/pr_analyzer/bot/github_client.py::update_comment ===
+```json
+[
+  {"id": 1, "label": "build auth headers", "description": "Constructs authentication headers by combining base headers with the provided token", "args": "token", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 142413ms, $0.0103]
+
+=== agents/pr_analyzer/bot/handler.py::_handle_analyze ===
+```json
+[
+  {"id": 3, "label": "fetch app secrets", "description": "Fetch GitHub App secrets from AWS Secrets Manager", "args": "(none)", "is_returned": true, "condition": null, "index": 0},
+  {"id": 1, "label": "get installation token", "description": "Exchange JWT for an installation access token", "args": "app_id=GITHUB_APP_ID, pem=secrets['private_key'], installation_id=installation_id", "is_returned": true, "condition": null, "index": 1},
+  {"id": 7, "label": "run PR analysis", "description": "Run the full analysis pipeline to clone repo, trace flows, and generate diagram", "args": "pr_url=pr_url, output_dir=Path('/tmp'), gh_token=token, analysis_id=analysis_id", "is_returned": true, "condition": null, "index": 2},
+  {"id": 2, "label": "post error comment", "description": "Update the analyzing comment with error message or post new comment", "args": "token, owner, repo, pr_number, analyzing_comment_id, error_body", "is_returned": false, "condition": "if Exception", "index": 3},
+  {"id": 6, "label": "upload analysis files", "description": "Upload analysis output files to Supabase storage", "args": "analysis_id, result_dir", "is_returned": false, "condition": "if analysis_id", "index": 4},
+  {"id": 5, "label": "parse cost data", "description": "Sum cost_usd from cost files in result directory", "args": "result_dir", "is_returned": true, "condition": "if analysis_id", "index": 5},
+  {"id": 4, "label": "complete analysis", "description": "Update analysis record with result path, cost, and finished_at timestamp", "args": "analysis_id, result_path, cost", "is_returned": false, "condition": "if analysis_id", "index": 6},
+  {"id": 2, "label": "post result comment", "description": "Update the analyzing comment with result or post new comment", "args": "token, owner, repo, pr_number, analyzing_comment_id, body", "is_returned": false, "condition": null, "index": 7}
+]
+```
+Applied 7/7 edges
+  [1 turns, 157570ms, $0.0498]
+
+=== agents/pr_analyzer/bot/handler.py::_handle_webhook ===
+```json
+[
+  {"id": 6, "label": "fetch app secrets", "description": "Retrieve GitHub App secrets from AWS Secrets Manager", "args": "()", "is_returned": true, "condition": null, "index": 0},
+  {"id": 5, "label": "verify webhook signature", "description": "Verify webhook request is authentic using HMAC-SHA256", "args": "raw_body, signature, webhook_secret", "is_returned": true, "condition": null, "index": 1},
+  {"id": 1, "label": "get installation token", "description": "Exchange JWT for GitHub App installation access token", "args": "app_id=GITHUB_APP_ID, pem=secrets['private_key'], installation_id", "is_returned": true, "condition": null, "index": 2},
+  {"id": 8, "label": "get supabase user id", "description": "Look up Supabase user ID from GitHub user ID", "args": "github_user_id", "is_returned": true, "condition": null, "index": 3},
+  {"id": 2, "label": "delete comment", "description": "Delete the /unslop_analyze command comment from unregistered user", "args": "token, owner, repo, comment_id", "is_returned": false, "condition": "if user not registered", "index": 4},
+  {"id": 4, "label": "post pr comment", "description": "Post signup requirement message to PR", "args": "token, owner, repo, pr_number, signup message", "is_returned": false, "condition": "if user not registered", "index": 4},
+  {"id": 3, "label": "has write permission", "description": "Check if user has write or higher permission on repository", "args": "token, owner, repo, github_username", "is_returned": true, "condition": null, "index": 5},
+  {"id": 2, "label": "delete comment", "description": "Delete the /unslop_analyze command comment from user without permissions", "args": "token, owner, repo, comment_id", "is_returned": false, "condition": "if insufficient write permissions", "index": 6},
+  {"id": 4, "label": "post pr comment", "description": "Post permission requirement message to PR", "args": "token, owner, repo, pr_number, permission message", "is_returned": false, "condition": "if insufficient write permissions", "index": 6},
+  {"id": 7, "label": "create analysis", "description": "Create analysis record in Supabase", "args": "supabase_user_id, repository_id", "is_returned": true, "condition": null, "index": 7},
+  {"id": 2, "label": "delete comment", "description": "Delete the /unslop_analyze command comment before analysis", "args": "token, owner, repo, comment_id", "is_returned": false, "condition": "in try block", "index": 8},
+  {"id": 4, "label": "post pr comment", "description": "Post analyzing status message and capture comment ID for updates", "args": "token, owner, repo, pr_number, analyzing message", "is_returned": true, "condition": "in try block", "index": 8}
+]
+```
+Applied 8/8 edges
+  [1 turns, 144921ms, $0.0601]
+
+=== agents/pr_analyzer/bot/handler.py::_update_or_post ===
+```json
+[
+  {
+    "id": 2,
+    "label": "update comment",
+    "description": "Update an existing PR comment",
+    "args": "token, owner, repo, comment_id, body",
+    "is_returned": false,
+    "condition": "if comment_id",
+    "index": 0
+  },
+  {
+    "id": 1,
+    "label": "post comment",
+    "description": "Post a new comment to the PR",
+    "args": "token, owner, repo, pr_number, body",
+    "is_returned": false,
+    "condition": "if not comment_id",
+    "index": 1
+  },
+  {
+    "id": 1,
+    "label": "post comment",
+    "description": "Post a new comment to the PR as fallback if first attempt fails",
+    "args": "token, owner, repo, pr_number, body",
+    "is_returned": false,
+    "condition": "except Exception",
+    "index": 2
+  }
+]
+```
+Applied 2/2 edges
+  [1 turns, 196001ms, $0.0468]
+
+=== agents/pr_analyzer/bot/handler.py::handler ===
+```json
+[
+  {
+    "id": 1,
+    "label": "run analysis",
+    "description": "Execute full PR analysis and post results",
+    "args": "(event, context)",
+    "is_returned": true,
+    "condition": "event.get(\"action\") == \"analyze\"",
+    "index": 1
+  },
+  {
+    "id": 2,
+    "label": "validate webhook",
+    "description": "Validate webhook and trigger analysis",
+    "args": "(event, context)",
+    "is_returned": true,
+    "condition": "\"headers\" in event",
+    "index": 0
+  }
+]
+```
+Applied 2/2 edges
+  [1 turns, 158605ms, $0.0218]
+
+=== agents/pr_analyzer/bot/supabase_client.py::complete_analysis ===
+```json
+[
+  {"id": 1, "label": "get github secrets", "description": "Retrieve GitHub App secrets from AWS Secrets Manager", "args": "", "is_returned": true, "condition": null, "index": 0},
+  {"id": 2, "label": "create headers", "description": "Create headers dictionary for Supabase API authentication", "args": "secrets[\"supabase_key\"]", "is_returned": true, "condition": null, "index": 1}
+]
+```
+Applied 2/2 edges
+  [1 turns, 143748ms, $0.0106]
+
+=== agents/pr_analyzer/bot/supabase_client.py::create_analysis ===
+```json
+[
+  {
+    "id": 1,
+    "label": "fetch app secrets",
+    "description": "Retrieve GitHub App secrets from AWS Secrets Manager with in-memory caching",
+    "args": "",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 2,
+    "label": "build auth headers",
+    "description": "Create Supabase authorization headers with API key and Bearer token",
+    "args": "secrets[\"supabase_key\"]",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  }
+]
+```
+Applied 2/2 edges
+  [1 turns, 107871ms, $0.0111]
+
+=== agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id ===
+```json
+[
+  {"id": 1, "label": "fetch secrets", "description": "Retrieves GitHub App secrets from AWS Secrets Manager with in-memory caching", "args": "", "is_returned": true, "condition": null, "index": 0},
+  {"id": 2, "label": "build headers", "description": "Creates HTTP headers dictionary with API key and Bearer token for Supabase request", "args": "secrets['supabase_key']", "is_returned": true, "condition": null, "index": 1}
+]
+```
+Applied 2/2 edges
+  [1 turns, 98061ms, $0.0076]
+
+=== agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files ===
+```json
+[
+  {"id": 1, "label": "fetch GitHub secrets", "description": "Retrieves GitHub App secrets from AWS Secrets Manager containing Supabase authentication credentials", "args": "", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 15675ms, $0.0137]
+
+=== agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool ===
+```json
+[
+  {"id": 1, "label": "sanitize description", "description": "Sanitizes the description text for D2 diagram format by replacing special characters", "args": "args.get(\"description\", \"\")", "is_returned": true, "condition": null, "index": 0},
+  {"id": 2, "label": "sanitize from id", "description": "Converts the source node name to a valid D2 identifier", "args": "from_name", "is_returned": true, "condition": null, "index": 1},
+  {"id": 2, "label": "sanitize to id", "description": "Converts the target node name to a valid D2 identifier", "args": "to_name", "is_returned": true, "condition": null, "index": 2}
+]
+```
+Applied 2/2 edges
+  [1 turns, 158513ms, $0.0402]
+
+=== agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool ===
+```json
+[
+  {
+    "id": 1,
+    "label": "escape name",
+    "description": "sanitizes the node name for D2 diagram syntax",
+    "args": "args[\"name\"]",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 1,
+    "label": "escape description",
+    "description": "sanitizes the description for D2 diagram syntax",
+    "args": "args.get(\"description\", \"\")",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 2,
+    "label": "create identifier",
+    "description": "converts the node name to a valid D2 identifier",
+    "args": "name",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  }
+]
+```
+Applied 2/2 edges
+  [1 turns, 179036ms, $0.0529]
+
+=== agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram ===
+```json
+[
+  {"id": 5, "label": "create diagram tools", "description": "Create add_node and add_edge tools for MCP server", "args": "nodes, edges", "is_returned": true, "condition": null, "index": 0},
+  {"id": 3, "label": "load system prompt", "description": "Load system prompt from markdown file", "args": "\"system_prompt.md\"", "is_returned": true, "condition": null, "index": 1},
+  {"id": 3, "label": "load prompt template", "description": "Load prompt template from markdown file", "args": "\"prompt.md\"", "is_returned": true, "condition": null, "index": 2},
+  {"id": 1, "label": "wrap prompt stream", "description": "Wrap string prompt as async iterator for MCP server compatibility", "args": "prompt", "is_returned": true, "condition": null, "index": 3},
+  {"id": 6, "label": "summarize tool input", "description": "Create summary text for tool input display", "args": "block.input", "is_returned": true, "condition": "isinstance(block, ToolUseBlock)", "index": 4},
+  {"id": 4, "label": "create debug directory", "description": "Create timestamped debug output directory", "args": "", "is_returned": true, "condition": "if debug", "index": 5},
+  {"id": 7, "label": "write debug logs", "description": "Write agent execution logs and metadata to debug files", "args": "out_dir=out_dir, log_full=log_full, log_short=log_short, result_text=result_text, message=message, wall_time=time.time() - start_time", "is_returned": false, "condition": "if debug", "index": 6},
+  {"id": 2, "label": "build diagram content", "description": "Generate d2 diagram content from nodes and edges", "args": "nodes, edges", "is_returned": true, "condition": "if nodes", "index": 7},
+  {"id": 4, "label": "create debug directory", "description": "Create debug output directory with timestamp", "args": "", "is_returned": true, "condition": null, "index": 8}
+]
+```
+Applied 7/7 edges
+  [1 turns, 201128ms, $0.0903]
+
+=== agents/pr_analyzer/diagram_generator/diagram_generator.py::main ===
+```json
+[
+  {"id": 1, "label": "generate diagram", "description": "Generates D2 diagram from PR summary and project code analysis", "args": "pr_summary, args[0], debug=debug", "is_returned": true, "condition": null, "index": 5}
+]
+```
+Applied 1/1 edges
+  [1 turns, 146574ms, $0.0386]
+
+=== agents/pr_analyzer/pr_analyzer.py::analyze_pr ===
+```json
+[
+  {"id": 2, "label": "clone and read PR", "description": "Clone repository and fetch PR metadata and diff", "args": "pr_url, output_dir, gh_token", "is_returned": true, "condition": null, "index": 0},
+  {"id": 3, "label": "summarize PR execution", "description": "Analyze PR execution flows and generate summary", "args": "project_path, pr_dir, debug, debug_dir", "is_returned": true, "condition": null, "index": 1},
+  {"id": 1, "label": "generate flow diagram", "description": "Generate D2 flow diagram from PR analysis", "args": "pr_summary, project_path, pr_dir, debug, debug_dir", "is_returned": true, "condition": null, "index": 2}
+]
+```
+Applied 3/3 edges
+  [1 turns, 86597ms, $0.0203]
+
+=== agents/pr_analyzer/pr_analyzer.py::main ===
+```json
+[
+  {"id": 1, "label": "analyze PR", "description": "Analyzes the pull request from the provided URL and returns the analysis result", "args": "sys.argv[1]", "is_returned": true, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 296601ms, $0.0394]
+
+=== agents/pr_analyzer/pr_reader/pr_reader.py::main ===
+```json
+[
+  {"id": 1, "label": "read PR", "description": "Retrieve pull request metadata, diff, and clone repository for analysis", "args": "pr_url, output_dir=output_dir", "is_returned": true, "condition": null, "index": 5}
+]
+```
+Applied 1/1 edges
+  [1 turns, 240015ms, $0.0168]
+
+=== agents/pr_analyzer/pr_reader/pr_reader.py::read_pr ===
+```json
+[
+  {
+    "id": 1,
+    "label": "parse PR URL",
+    "description": "Parses GitHub PR URL to extract owner, repository name, and PR number",
+    "args": "pr_url",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 2,
+    "label": "create output directory",
+    "description": "Creates a timestamped output directory for storing analysis results",
+    "args": "",
+    "is_returned": true,
+    "condition": "if not output_dir",
+    "index": 1
+  },
+  {
+    "id": 3,
+    "label": "clone repository",
+    "description": "Clones the GitHub repository to a local directory for analysis",
+    "args": "gh repo clone {owner}/{repo}, timeout=300",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  },
+  {
+    "id": 4,
+    "label": "fetch PR metadata",
+    "description": "Fetches pull request metadata including title, author, status, and changed files",
+    "args": "gh pr view {pr_number} --json, cwd=repo_dir",
+    "is_returned": true,
+    "condition": null,
+    "index": 3
+  },
+  {
+    "id": 5,
+    "label": "fetch PR diff",
+    "description": "Retrieves the complete diff showing all modifications in the pull request",
+    "args": "gh pr diff {pr_number}, cwd=repo_dir",
+    "is_returned": true,
+    "condition": null,
+    "index": 4
+  },
+  {
+    "id": 6,
+    "label": "checkout pre-merge commit",
+    "description": "Restores code to pre-merge state by checking out the parent commit",
+    "args": "git checkout {merge_oid}~1, cwd=repo_dir",
+    "is_returned": true,
+    "condition": "if state == \"MERGED\" and merge_oid",
+    "index": 5
+  }
+]
+```
+Applied 3/3 edges
+  [1 turns, 269533ms, $0.0493]
+
+=== agents/pr_analyzer/pr_tracer/pr_tracer.py::main ===
+```json
+[
+  {
+    "id": 1,
+    "label": "analyze pull request",
+    "description": "Analyzes the pull request using the Claude Agent API and returns a summary of changes",
+    "args": "args[0], args[1], debug=debug",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 229386ms, $0.0226]
+
+=== agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr ===
+```json
+[
+  {
+    "id": 1,
+    "label": "load system prompt",
+    "description": "Load system prompt markdown file",
+    "args": "\"system_prompt.md\"",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 1,
+    "label": "load prompt template",
+    "description": "Load prompt template markdown file",
+    "args": "\"prompt.md\"",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 3,
+    "label": "summarize tool input",
+    "description": "Summarize tool use input for display",
+    "args": "block.input",
+    "is_returned": true,
+    "condition": "isinstance(block, ToolUseBlock)",
+    "index": 2
+  },
+  {
+    "id": 2,
+    "label": "make debug directory",
+    "description": "Create debug output directory with timestamp",
+    "args": "",
+    "is_returned": true,
+    "condition": "debug and not debug_dir",
+    "index": 3
+  },
+  {
+    "id": 4,
+    "label": "write debug files",
+    "description": "Write debug logs and info to output directory",
+    "args": "out_dir, log_full, log_short, result_text, message, wall_time",
+    "is_returned": false,
+    "condition": "debug",
+    "index": 4
+  }
+]
+```
+Applied 4/4 edges
+  [1 turns, 362301ms, $0.0584]
+
+=== agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls ===
+```json
+[
+  {"id": 1, "label": "extract callee name", "description": "Extract the function or method name from a call expression node", "args": "node, lang", "is_returned": true, "condition": "if is_call", "index": 0},
+  {"id": 2, "label": "append call record", "description": "Add the collected call record to the calls list", "args": "(name, is_returned)", "is_returned": false, "condition": "if name is not None", "index": 1},
+  {"id": 3, "label": "collect child calls", "description": "Recursively collect calls from child nodes", "args": "child, calls, lang", "is_returned": false, "condition": null, "index": 2}
+]
+```
+Applied 1/1 edges
+  [1 turns, 160481ms, $0.0370]
+
+=== agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file ===
+```json
+[
+  {"id": 1, "label": "walk for functions", "description": "Recursively walk the AST to collect function definitions with class context", "args": "root, lang, results, class_stack=[]", "is_returned": false, "condition": null, "index": 0}
+]
+```
+Applied 1/1 edges
+  [1 turns, 114828ms, $0.0087]
+
+=== agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls ===
+```json
+[
+  {
+    "id": 1,
+    "label": "collect calls",
+    "description": "Recursively collect function calls from child node",
+    "args": "child, calls, lang",
+    "is_returned": false,
+    "condition": "body is None",
+    "index": 0
+  },
+  {
+    "id": 2,
+    "label": "collect calls",
+    "description": "Recursively collect function calls from body",
+    "args": "body, calls, lang",
+    "is_returned": false,
+    "condition": "body is not None",
+    "index": 1
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 141933ms, $0.0480]
+
+=== agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph ===
+```json
+[
+  {
+    "id": 4,
+    "label": "iterate source files",
+    "description": "Yield all supported source files, skipping non-source directories",
+    "args": "repo_path",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 3,
+    "label": "create language parser",
+    "description": "Get a tree-sitter parser instance for the specified language",
+    "args": "lang",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 1,
+    "label": "extract function definitions",
+    "description": "Find all named function definitions and return (qualified_name, node) pairs",
+    "args": "tree.root_node, lang",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  },
+  {
+    "id": 2,
+    "label": "extract direct calls",
+    "description": "Get all function call names with is_returned flag from function body",
+    "args": "func_node, lang",
+    "is_returned": true,
+    "condition": null,
+    "index": 3
+  }
+]
+```
+Applied 4/4 edges
+  [1 turns, 120255ms, $0.0360]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge ===
+```json
+[
+  {"id": 1, "label": "sanitize from identifier", "description": "Converts from_id to a valid mermaid identifier by removing special characters and collapsing underscores", "args": "from_id", "is_returned": true, "condition": null, "index": 0},
+  {"id": 2, "label": "sanitize to identifier", "description": "Converts to_id to a valid mermaid identifier by removing special characters and collapsing underscores", "args": "to_id", "is_returned": true, "condition": null, "index": 1},
+  {"id": 3, "label": "sanitize label text", "description": "Sanitizes the edge label text for use inside mermaid labels by escaping special characters", "args": "edge.get(\"label\", \"\")", "is_returned": true, "condition": "edge is not None", "index": 2}
+]
+```
+Applied 2/2 edges
+  [1 turns, 213650ms, $0.0180]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node ===
+```json
+[
+  {"id": 1, "label": "sanitize id", "description": "Convert a call graph node ID to a valid mermaid identifier", "args": "node['id']", "is_returned": true, "condition": null, "index": 0},
+  {"id": 2, "label": "sanitize text", "description": "Sanitize text for use inside mermaid labels", "args": "node.get('name') or node['id'].split('::')[-1]", "is_returned": true, "condition": null, "index": 1}
+]
+```
+Applied 2/2 edges
+  [1 turns, 166931ms, $0.0073]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat ===
+```json
+[
+  {"id": 2, "label": "format node", "description": "Formats a node as a mermaid node definition line", "args": "node, has_sub=nid in roots", "is_returned": true, "condition": "if node", "index": 0},
+  {"id": 1, "label": "format edge", "description": "Formats an edge as a mermaid edge line", "args": "e['from'], e['to'], e", "is_returned": true, "condition": "if e['to'] in node_ids and key not in emitted", "index": 1}
+]
+```
+Applied 2/2 edges
+  [1 turns, 181333ms, $0.0267]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram ===
+```json
+[
+  {"id": 3, "label": "visit entry nodes", "description": "Iterates through entry node IDs and visits each one to start building the diagram", "args": "eid", "is_returned": false, "condition": null, "index": 0},
+  {"id": 2, "label": "format node as mermaid", "description": "Renders a main node as a mermaid node definition line", "args": "node, has_sub=nid in sub_roots", "is_returned": false, "condition": "if node", "index": 1},
+  {"id": 2, "label": "format target node as mermaid", "description": "Renders a target node as a mermaid node definition if not already emitted", "args": "node, has_sub=target in sub_roots", "is_returned": false, "condition": "if target not in emitted_nodes and node", "index": 2},
+  {"id": 1, "label": "format edge as mermaid", "description": "Renders an edge in the main diagram as a mermaid edge definition line", "args": "e['from'], e['to'], e", "is_returned": false, "condition": "if key not in emitted_edges", "index": 3},
+  {"id": 3, "label": "visit inline target", "description": "Recursively visits target node from an inline (non-split) edge", "args": "e['to']", "is_returned": false, "condition": "if nid in inline", "index": 4},
+  {"id": 3, "label": "visit non-returned target", "description": "Recursively visits target node from a non-returned edge", "args": "e['to']", "is_returned": false, "condition": null, "index": 5}
+]
+```
+Applied 3/3 edges
+  [1 turns, 202747ms, $0.0580]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name ===
+```json
+[
+  {
+    "id": 1,
+    "label": "sanitize name",
+    "description": "Convert node name to filename-safe identifier by removing special characters",
+    "args": "node[\"name\"]",
+    "is_returned": true,
+    "condition": "if node and node.get(\"name\")",
+    "index": 0
+  },
+  {
+    "id": 1,
+    "label": "sanitize name",
+    "description": "Convert root_id segment to filename-safe identifier by removing special characters",
+    "args": "root_id.split(\"::\")[-1]",
+    "is_returned": true,
+    "condition": "else",
+    "index": 1
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 185159ms, $0.0374]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams ===
+```json
+[
+  {
+    "id": 1,
+    "label": "collect reachable nodes",
+    "description": "Performs DFS from start points to find all reachable nodes in the call graph",
+    "args": "start_points, edge_index, all_node_ids",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  },
+  {
+    "id": 2,
+    "label": "render flat diagram",
+    "description": "Renders all reachable nodes and edges as a single flat mermaid diagram",
+    "args": "reachable, edge_index, node_index",
+    "is_returned": true,
+    "condition": "if len(reachable) <= MAX_NODES_PER_DIAGRAM",
+    "index": 1
+  },
+  {
+    "id": 3,
+    "label": "split into diagrams",
+    "description": "Splits the call graph into a main diagram and sub-diagrams when it exceeds the node threshold",
+    "args": "start_points, edge_index, node_index, reachable",
+    "is_returned": true,
+    "condition": "if len(reachable) > MAX_NODES_PER_DIAGRAM",
+    "index": 2
+  }
+]
+```
+Applied 3/3 edges
+  [1 turns, 14982ms, $0.0185]
+
+=== agents/repo_analyzer/diagram_builder/diagram_builder.py::visit ===
+```json
+[
+  {
+    "id": 1,
+    "label": "visit inline edges",
+    "description": "Recursively visit the target node of an inline edge",
+    "args": "e[\"to\"]",
+    "is_returned": false,
+    "condition": "if nid in inline",
+    "index": 0
+  },
+  {
+    "id": 2,
+    "label": "visit non-returned edges",
+    "description": "Recursively visit the target node of a non-returned edge",
+    "args": "e[\"to\"]",
+    "is_returned": false,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 3,
+    "label": "generate sub-diagram name",
+    "description": "Generate a unique filename-safe name for the sub-diagram",
+    "args": "nid, node_index, sub_diagrams",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  },
+  {
+    "id": 4,
+    "label": "render flat mermaid diagram",
+    "description": "Render all nodes and edges as a single flat mermaid diagram",
+    "args": "sub_scope, edge_index, node_index",
+    "is_returned": true,
+    "condition": "if len(sub_scope) <= MAX_NODES_PER_DIAGRAM",
+    "index": 3
+  },
+  {
+    "id": 5,
+    "label": "recursively split diagram",
+    "description": "Recursively split the sub-diagram into smaller diagrams if it exceeds the node threshold",
+    "args": "[nid], edge_index, node_index, sub_scope, inline_ids={nid}",
+    "is_returned": true,
+    "condition": "else",
+    "index": 4
+  }
+]
+```
+Applied 3/3 edges
+  [1 turns, 226704ms, $0.0669]
+
+=== agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller ===
+```json
+[
+  {
+    "id": 1,
+    "label": "apply results",
+    "description": "Applies parsed JSON results to edge dictionaries by id, returning count of completed edges and any errors",
+    "args": "edges, result_json",
+    "is_returned": true,
+    "condition": "result_json",
+    "index": 4
+  },
+  {
+    "id": 2,
+    "label": "convert to stream",
+    "description": "Converts the prompt text to an async generator stream format with user message structure",
+    "args": "prompt",
+    "is_returned": true,
+    "condition": null,
+    "index": 2
+  },
+  {
+    "id": 3,
+    "label": "build prompt",
+    "description": "Builds the complete prompt text containing caller function source and all callees with their sources",
+    "args": "caller_id, caller_source, callees",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  },
+  {
+    "id": 4,
+    "label": "extract JSON array",
+    "description": "Extracts and parses a JSON array from the agent's text output using regex patterns",
+    "args": "full_text",
+    "is_returned": true,
+    "condition": "not message.is_error",
+    "index": 3
+  },
+  {
+    "id": 5,
+    "label": "load system prompt",
+    "description": "Reads the system prompt markdown file from the agents directory",
+    "args": "\"system_prompt.md\"",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  }
+]
+```
+Applied 5/5 edges
+  [1 turns, 177844ms, $0.0258]
+
+=== agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph ===
+```json
+[
+  {
+    "id": 1,
+    "label": "run edge builder",
+    "description": "Runs the edge_builder agent to enrich edge properties for all edges from a single caller",
+    "args": "caller_id, caller_source, edges, node_index",
+    "is_returned": true,
+    "condition": null,
+    "index": 3
+  },
+  {
+    "id": 2,
+    "label": "extract file path",
+    "description": "Extracts file path from node ID by splitting on '::' delimiter",
+    "args": "node[\"id\"]",
+    "is_returned": true,
+    "condition": "if node.get(\"source\")",
+    "index": 0
+  },
+  {
+    "id": 3,
+    "label": "rate-limit edge builder",
+    "description": "Wraps edge builder coroutine with semaphore for rate limiting across concurrent edge enrichment",
+    "args": "coroutine from run_edge_builder_for_caller",
+    "is_returned": true,
+    "condition": null,
+    "index": 3
+  },
+  {
+    "id": 4,
+    "label": "write consolidated log",
+    "description": "Writes consolidated log file with per-agent sections and summary statistics",
+    "args": "output_dir / \"node_builder.log\", node_results, \"node_builder\"",
+    "is_returned": false,
+    "condition": null,
+    "index": 2
+  },
+  {
+    "id": 5,
+    "label": "run node builder",
+    "description": "Runs the node_builder agent to enrich node properties for all nodes in a source file",
+    "args": "file_path, nodes",
+    "is_returned": true,
+    "condition": null,
+    "index": 1
+  }
+]
+```
+Applied 5/5 edges
+  [1 turns, 231493ms, $0.0724]
+
+=== agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file ===
+```json
+[
+  {"id": 5, "label": "load markdown", "description": "Load the system prompt markdown file", "args": "\"system_prompt.md\"", "is_returned": true, "condition": null, "index": 0},
+  {"id": 3, "label": "build prompt", "description": "Build the prompt for the node_builder agent with inline source code from nodes", "args": "file_path, nodes", "is_returned": true, "condition": null, "index": 1},
+  {"id": 2, "label": "create stream", "description": "Create an async stream with the prompt as a user message for the query", "args": "prompt", "is_returned": true, "condition": null, "index": 2},
+  {"id": 4, "label": "extract JSON", "description": "Extract and parse JSON array from the agent's text output", "args": "full_text", "is_returned": true, "condition": "if not message.is_error", "index": 3},
+  {"id": 1, "label": "apply results", "description": "Apply parsed JSON results to node dicts by index, returning count of completed nodes and any errors", "args": "nodes, result_json", "is_returned": true, "condition": "if result_json is not None", "index": 4}
+]
+```
+Applied 5/5 edges
+  [1 turns, 170516ms, $0.0452]
+
+=== agents/repo_analyzer/repo_analyzer.py::analyze_repo ===
+```json
+[
+  {"id": 4, "label": "clone repository", "description": "Clone a git repository to the specified destination directory", "args": "repo_url, repo_dir", "is_returned": true, "condition": null, "index": 0},
+  {"id": 1, "label": "build call graph", "description": "Build a function call graph by analyzing the cloned repository", "args": "repo_dir", "is_returned": true, "condition": null, "index": 1},
+  {"id": 3, "label": "enrich call graph", "description": "Enrich nodes and edges in the call graph with LLM analysis", "args": "call_graph, str(repo_dir), output_dir=result_dir", "is_returned": true, "condition": null, "index": 2},
+  {"id": 2, "label": "build diagrams", "description": "Generate mermaid diagrams from the enriched call graph", "args": "call_graph, start_points", "is_returned": true, "condition": null, "index": 3}
+]
+```
+Applied 4/4 edges
+  [1 turns, 137482ms, $0.0247]
+
+=== agents/repo_analyzer/repo_analyzer.py::main ===
+```json
+[
+  {
+    "id": 1,
+    "label": "analyze repository",
+    "description": "Analyzes the repository at the given URL to build its function call graph, producing call_graph.json, start_points.json, end_points.json, orphans.json, and mermaid diagrams",
+    "args": "repo_url, output_dir=output_dir",
+    "is_returned": true,
+    "condition": null,
+    "index": 4
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 273386ms, $0.0445]
+
+=== agents/repo_analyzer/rerun_diagrams.py::main ===
+```json
+[
+  {
+    "id": 1,
+    "label": "build diagrams",
+    "description": "Build mermaid diagrams from enriched call graph and start points",
+    "args": "call_graph, start_points",
+    "is_returned": true,
+    "condition": null,
+    "index": 0
+  }
+]
+```
+Applied 1/1 edges
+  [1 turns, 254023ms, $0.0328]

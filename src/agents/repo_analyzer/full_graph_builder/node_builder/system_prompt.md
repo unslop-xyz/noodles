@@ -23,3 +23,5 @@ Output format (JSON array, no other text):
   {"id": 2, "name": "...", "description": "...", "tag": "test"}
 ]
 ```
+
+NOTE: You are meant to be a fast agent that returns output as quickly as possible.

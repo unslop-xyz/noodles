@@ -1,0 +1,12 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph["Build repository call graph"]:::solid
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams["Build mermaid diagrams"]:::solid
+    agents_repo_analyzer_full_graph_builder_full_graph_builder_py_build_full_graph["Enrich graph with agent analysis"]:::solid
+    agents_repo_analyzer_repo_analyzer_py_clone_repo(["Clone git repository"]):::transparent
+    agents_repo_analyzer_repo_analyzer_py_analyze_repo["Build repository analysis"]:::transparent
+    agents_repo_analyzer_repo_analyzer_py_analyze_repo -.->|"build call graph"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph
+    agents_repo_analyzer_repo_analyzer_py_analyze_repo -.->|"build diagrams"| agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams
+    agents_repo_analyzer_repo_analyzer_py_analyze_repo -.->|"enrich call graph"| agents_repo_analyzer_full_graph_builder_full_graph_builder_py_build_full_graph
+    agents_repo_analyzer_repo_analyzer_py_analyze_repo -.->|"clone repository"| agents_repo_analyzer_repo_analyzer_py_clone_repo

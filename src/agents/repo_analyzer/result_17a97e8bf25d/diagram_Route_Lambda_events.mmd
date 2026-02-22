@@ -1,0 +1,8 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_bot_handler_py_handle_analyze["Execute PR analysis pipeline"]:::solid
+    agents_pr_analyzer_bot_handler_py_handle_webhook["Process webhook and trigger analysis"]:::solid
+    agents_pr_analyzer_bot_handler_py_handler("Route Lambda events"):::transparent
+    agents_pr_analyzer_bot_handler_py_handler -.->|"run analysis"| agents_pr_analyzer_bot_handler_py_handle_analyze
+    agents_pr_analyzer_bot_handler_py_handler -.->|"validate webhook"| agents_pr_analyzer_bot_handler_py_handle_webhook

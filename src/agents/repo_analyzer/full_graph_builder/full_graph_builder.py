@@ -12,8 +12,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 from node_builder.node_builder import run_node_builder_for_file
 from edge_builder.edge_builder import run_edge_builder_for_caller
 
-# Edge builders run one-per-edge and hit rate limits easily.
-MAX_CONCURRENT_EDGE_AGENTS = 5
+MAX_CONCURRENT_AGENTS = 10
+
+
+def _print_progress(label: str, done: int, total: int) -> None:
+    """Print an in-place progress bar to stderr."""
+    width = 30
+    filled = int(width * done / total) if total else width
+    bar = "█" * filled + "░" * (width - filled)
+    pct = (done / total * 100) if total else 100
+    print(f"\r  {label}: |{bar}| {done}/{total} ({pct:.0f}%)", end="", flush=True)
 
 
 def _file_from_id(node_id: str) -> str:
@@ -48,22 +56,34 @@ async def build_full_graph(
         print("  Nothing to process.")
         return call_graph
 
-    # -- Phase 1: Node builders (batched by file, all concurrent) -----------
+    # -- Phase 1: Node builders (batched by file, max 10 concurrent) --------
     nodes_by_file: dict[str, list[dict]] = defaultdict(list)
     for node in nodes:
         if node.get("source"):
             nodes_by_file[_file_from_id(node["id"])].append(node)
 
-    print(f"Enriching {len(nodes)} nodes across {len(nodes_by_file)} files ...")
+    total_node_tasks = len(nodes_by_file)
+    print(f"Enriching {len(nodes)} nodes across {total_node_tasks} files ...")
+
+    node_semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
+    node_done = {"count": 0}
+
+    async def _run_node(fp, file_nodes):
+        async with node_semaphore:
+            result = await run_node_builder_for_file(file_path=fp, nodes=file_nodes)
+        node_done["count"] += 1
+        _print_progress("Nodes", node_done["count"], total_node_tasks)
+        return result
+
     node_tasks = [
-        run_node_builder_for_file(file_path=fp, nodes=file_nodes)
+        _run_node(fp, file_nodes)
         for fp, file_nodes in nodes_by_file.items()
     ]
     node_results = await asyncio.gather(*node_tasks, return_exceptions=True)
     _write_consolidated_log(output_dir / "node_builder.log", node_results, "node_builder")
 
     n_ok = sum(1 for r in node_results if isinstance(r, dict) and r.get("success"))
-    print(f"  Nodes done: {n_ok}/{len(node_tasks)} files enriched.")
+    print(f"\n  Nodes done: {n_ok}/{total_node_tasks} files enriched.")
 
     # -- Phase 2: Edge builders (batched by caller, rate-limited) ------------
     # Skip edges where the caller node is tagged as "test".
@@ -81,34 +101,36 @@ async def build_full_graph(
     if skipped_edges:
         print(f"  Skipped {skipped_edges} edges from test nodes.")
 
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT_EDGE_AGENTS)
-
-    async def _run_edge(coro):
-        async with semaphore:
-            return await coro
+    edge_semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
+    edge_done = {"count": 0}
+    total_edge_tasks = len(edges_by_caller)
 
     edge_tasks = []
     total_edges = 0
     for caller_id, caller_edges in edges_by_caller.items():
         caller = node_index[caller_id]
         total_edges += len(caller_edges)
-        edge_tasks.append(
-            _run_edge(
-                run_edge_builder_for_caller(
-                    caller_id=caller_id,
-                    caller_source=caller.get("source", ""),
-                    edges=caller_edges,
+
+        async def _run_edge(cid=caller_id, csrc=caller.get("source", ""), ce=caller_edges):
+            async with edge_semaphore:
+                result = await run_edge_builder_for_caller(
+                    caller_id=cid,
+                    caller_source=csrc,
+                    edges=ce,
                     node_index=node_index,
                 )
-            )
-        )
+            edge_done["count"] += 1
+            _print_progress("Edges", edge_done["count"], total_edge_tasks)
+            return result
 
-    print(f"Enriching {total_edges} edges across {len(edge_tasks)} callers (max {MAX_CONCURRENT_EDGE_AGENTS} concurrent) ...")
+        edge_tasks.append(_run_edge())
+
+    print(f"Enriching {total_edges} edges across {total_edge_tasks} callers (max {MAX_CONCURRENT_AGENTS} concurrent) ...")
     edge_results = await asyncio.gather(*edge_tasks, return_exceptions=True)
     _write_consolidated_log(output_dir / "edge_builder.log", edge_results, "edge_builder")
 
     e_ok = sum(1 for r in edge_results if isinstance(r, dict) and r.get("success"))
-    print(f"  Edges done: {e_ok}/{len(edge_tasks)} callers enriched.")
+    print(f"\n  Edges done: {e_ok}/{total_edge_tasks} callers enriched.")
 
     return call_graph
 

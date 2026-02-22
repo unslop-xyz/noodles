@@ -1,0 +1,18 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_collect_calls["Collect function calls"]:::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_extract_callee_name(["Extract called function name"]):::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_find_functions_in_file["Find all file functions"]:::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_get_direct_calls["Get function call map"]:::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_get_parser(["Create language parser"]):::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_iter_source_files(["Iterate source files"]):::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_walk_for_funcs(["Walk and collect functions"]):::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph["Build repository call graph"]:::transparent
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_collect_calls -.->|"extract callee name"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_extract_callee_name
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_find_functions_in_file -.->|"walk for functions"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_walk_for_funcs
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_get_direct_calls -.->|"collect calls"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_collect_calls
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph -.->|"extract function definitions"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_find_functions_in_file
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph -.->|"extract direct calls"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_get_direct_calls
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph -.->|"create language parser"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_get_parser
+    agents_repo_analyzer_call_graph_builder_call_graph_builder_py_build_call_graph -.->|"iterate source files"| agents_repo_analyzer_call_graph_builder_call_graph_builder_py_iter_source_files

@@ -1,0 +1,6 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_bot_github_client_py_auth_headers(["Build auth headers"]):::transparent
+    agents_pr_analyzer_bot_github_client_py_add_reaction("Add comment reaction"):::transparent
+    agents_pr_analyzer_bot_github_client_py_add_reaction -.->|"generate auth headers"| agents_pr_analyzer_bot_github_client_py_auth_headers

@@ -3,14 +3,12 @@ from collections import defaultdict
 from pathlib import Path
 
 try:
-    import tree_sitter_python as tspython
-    import tree_sitter_javascript as tsjavascript
-    import tree_sitter_typescript as tstypescript
-    from tree_sitter import Language, Parser, Node
+    from tree_sitter_language_pack import get_parser as _ts_get_parser
+    from tree_sitter import Node
 except ImportError as e:
     print(
-        f"Error: tree-sitter packages not installed. Run:\n"
-        f"  pip install tree-sitter tree-sitter-python tree-sitter-javascript tree-sitter-typescript",
+        f"Error: tree-sitter-language-pack not installed. Run:\n"
+        f"  pip install tree-sitter-language-pack",
         file=sys.stderr,
     )
     raise
@@ -31,14 +29,12 @@ EXTENSION_TO_LANG = {
 }
 
 
-def _get_parser(lang: str) -> Parser:
-    if lang == "python":
-        return Parser(Language(tspython.language()))
-    elif lang == "javascript":
-        return Parser(Language(tsjavascript.language()))
-    elif lang in ("typescript", "tsx"):
-        return Parser(Language(tstypescript.language_typescript()))
-    raise ValueError(f"Unsupported language: {lang}")
+def _get_parser(lang: str):
+    """Return a tree-sitter parser for the given language name."""
+    try:
+        return _ts_get_parser(lang)
+    except Exception:
+        raise ValueError(f"Unsupported language: {lang}")
 
 
 def build_call_graph(

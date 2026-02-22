@@ -1,0 +1,2188 @@
+{
+  "nodes": [
+    {
+      "id": "agents/integration_points_finder/integration_points_finder.py::_load_md",
+      "type": "end_point",
+      "callers": [
+        "agents/integration_points_finder/integration_points_finder.py::find_integration_points"
+      ],
+      "callees": [],
+      "name": "Load markdown file",
+      "description": "Reads a markdown file from the agent directory and returns its content as a string.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/integration_points_finder/integration_points_finder.py::_summarize_tool_input",
+      "type": "end_point",
+      "callers": [
+        "agents/integration_points_finder/integration_points_finder.py::find_integration_points"
+      ],
+      "callees": [],
+      "name": "Summarize tool input",
+      "description": "Extracts a concise summary of tool input data, prioritizing specific keys like pattern and file_path, and truncating long command strings.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/integration_points_finder/integration_points_finder.py::_write_debug_files",
+      "type": "end_point",
+      "callers": [
+        "agents/integration_points_finder/integration_points_finder.py::find_integration_points"
+      ],
+      "callees": [],
+      "name": "Write debug output files",
+      "description": "Writes multiple debug output files to disk including results, logs, and execution info, then prints their file paths.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/integration_points_finder/integration_points_finder.py::find_integration_points",
+      "type": "process",
+      "callers": [
+        "agents/integration_points_finder/integration_points_finder.py::main"
+      ],
+      "callees": [
+        "agents/integration_points_finder/integration_points_finder.py::_load_md",
+        "agents/integration_points_finder/integration_points_finder.py::_summarize_tool_input",
+        "agents/integration_points_finder/integration_points_finder.py::_write_debug_files"
+      ],
+      "name": "Run integration analyzer",
+      "description": "Runs an AI agent to analyze a project and find integration points, processing messages and optionally saving debug logs. Returns the final analysis result or None if an error occurred.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/integration_points_finder/integration_points_finder.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/integration_points_finder/integration_points_finder.py::find_integration_points"
+      ],
+      "name": "Execute CLI tool",
+      "description": "Parses command-line arguments and invokes the integration point finder on the specified project path. Exits with an error code if the operation fails.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_auth.py::generate_jwt",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/github_auth.py::get_installation_token"
+      ],
+      "callees": [],
+      "name": "Create GitHub App JWT",
+      "description": "Generates a short-lived JWT token for GitHub App authentication with a 10-minute expiration window.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_auth.py::generate_jwt"
+      ],
+      "name": "Fetch installation access token",
+      "description": "Exchanges a JWT for a GitHub App installation access token by calling the GitHub API.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/github_client.py::add_reaction",
+        "agents/pr_analyzer/bot/github_client.py::delete_comment",
+        "agents/pr_analyzer/bot/github_client.py::has_write_permission",
+        "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+        "agents/pr_analyzer/bot/github_client.py::update_comment"
+      ],
+      "callees": [],
+      "name": "Build auth headers",
+      "description": "Creates HTTP headers with GitHub API authentication token for authorized API requests.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::add_reaction",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::_auth_headers"
+      ],
+      "name": "Add comment reaction",
+      "description": "Adds a reaction emoji to a GitHub comment via the API.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::delete_comment",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::_auth_headers"
+      ],
+      "name": "Delete comment",
+      "description": "Removes a comment from a GitHub repository.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::has_write_permission",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::_auth_headers"
+      ],
+      "name": "Check write permission",
+      "description": "Checks if a user has write-level or higher permissions on a repository.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+        "agents/pr_analyzer/bot/handler.py::_update_or_post"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::_auth_headers"
+      ],
+      "name": "Post PR comment",
+      "description": "Posts a new comment on a pull request in a GitHub repository.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/github_client.py::update_comment",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_update_or_post"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::_auth_headers"
+      ],
+      "name": "Update comment text",
+      "description": "Updates the text content of an existing GitHub comment.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::handler"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+        "agents/pr_analyzer/bot/handler.py::_update_or_post",
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+        "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::parse_cost",
+        "agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files",
+        "agents/pr_analyzer/pr_analyzer.py::analyze_pr"
+      ],
+      "name": "Execute PR analysis pipeline",
+      "description": "Runs the full PR analysis asynchronously, uploads results to Supabase, and posts or updates a PR comment with the analysis diagram URL or completion status.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::handler"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+        "agents/pr_analyzer/bot/github_client.py::delete_comment",
+        "agents/pr_analyzer/bot/github_client.py::has_write_permission",
+        "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+        "agents/pr_analyzer/bot/handler.py::_verify_signature",
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+        "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id"
+      ],
+      "name": "Process webhook and trigger analysis",
+      "description": "Validates GitHub webhook signatures, verifies user registration and permissions, creates an analysis record, and asynchronously invokes the analysis handler when /unslop_analyze command is detected on a PR.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/handler.py::_update_or_post",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+        "agents/pr_analyzer/bot/github_client.py::update_comment"
+      ],
+      "name": "Update or post comment",
+      "description": "Updates an existing PR comment with results, or posts a new comment as a fallback if the update fails.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/handler.py::_verify_signature",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [],
+      "name": "Validate webhook signature",
+      "description": "Verifies GitHub webhook request authenticity by comparing the request signature against an HMAC-SHA256 hash of the payload.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/handler.py::handler",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "name": "Route Lambda events",
+      "description": "Dispatches incoming Lambda events to either the webhook handler or analysis handler based on event structure.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+        "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id",
+        "agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files"
+      ],
+      "callees": [],
+      "name": "Fetch GitHub App secrets",
+      "description": "Retrieves GitHub App secrets from AWS Secrets Manager and caches them in-memory for subsequent Lambda invocations.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::_headers",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+        "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id"
+      ],
+      "callees": [],
+      "name": "Format API headers",
+      "description": "Constructs HTTP headers dictionary with API key and Bearer authorization token for Supabase REST API requests.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+        "agents/pr_analyzer/bot/supabase_client.py::_headers"
+      ],
+      "name": "Update analysis completion",
+      "description": "Sends a PATCH request to mark an analysis as finished, updating its result path, cost, and finished_at timestamp in Supabase.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+        "agents/pr_analyzer/bot/supabase_client.py::_headers"
+      ],
+      "name": "Create new analysis record",
+      "description": "Sends a POST request to create a new analysis record in Supabase and returns the generated analysis UUID.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_webhook"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+        "agents/pr_analyzer/bot/supabase_client.py::_headers"
+      ],
+      "name": "Look up user ID by GitHub ID",
+      "description": "Calls a Supabase RPC function to retrieve the Supabase user ID corresponding to a given GitHub user ID, returning None if not found.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::parse_cost",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze"
+      ],
+      "callees": [],
+      "name": "Aggregate cost from files",
+      "description": "Reads multiple markdown files and sums all cost_usd values to calculate the total analysis cost.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze"
+      ],
+      "callees": [
+        "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets"
+      ],
+      "name": "Upload results to storage",
+      "description": "Uploads analysis output files to the Supabase storage bucket for the given analysis ID.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_as_stream",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Wrap prompt as async stream",
+      "description": "Converts a string prompt into an AsyncIterable format for SDK MCP server compatibility.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_build_d2",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Generate d2 diagram content",
+      "description": "Builds d2 diagram syntax from node and edge data structures, filtering connected nodes and applying styling.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_load_md",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Load markdown file",
+      "description": "Reads and returns the text content from a markdown file in the agent directory.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_debug_dir",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Create timestamped debug directory",
+      "description": "Creates a new directory with current timestamp in TEST_DIR for storing debug output files.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_tools",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Create diagram building tools",
+      "description": "Generates add_node and add_edge tool functions with closure-based shared state for accumulating diagram elements.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_d2_text",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool"
+      ],
+      "callees": [],
+      "name": "Sanitize text for d2 labels",
+      "description": "Escapes and replaces special characters to make text safe for use in d2 diagram labels and tooltips.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_id",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool"
+      ],
+      "callees": [],
+      "name": "Convert name to valid d2 identifier",
+      "description": "Transforms human-readable names into valid d2 identifiers by removing special characters and lowercasing.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_summarize_tool_input",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Summarize tool input for logging",
+      "description": "Creates concise string representations of tool arguments for display in short-form logs.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_write_debug_files",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "callees": [],
+      "name": "Write debug output files",
+      "description": "Saves agent execution logs, results, and metadata to markdown files in the output directory.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_d2_text",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_id"
+      ],
+      "name": "Add edge to diagram",
+      "description": "Creates a directed edge between two nodes with validation that both endpoints exist in the node registry.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_d2_text",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_id"
+      ],
+      "name": "Add node to diagram",
+      "description": "Creates a new diagram node with type, status, and description, preventing duplicate node IDs.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::main",
+        "agents/pr_analyzer/pr_analyzer.py::analyze_pr"
+      ],
+      "callees": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_as_stream",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_build_d2",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_load_md",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_debug_dir",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_tools",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_summarize_tool_input",
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::_write_debug_files"
+      ],
+      "name": "Generate execution flow diagram",
+      "description": "Orchestrates agent interaction to analyze PR changes and build an execution flow diagram from tool results.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/diagram_generator/diagram_generator.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram"
+      ],
+      "name": "Parse arguments and generate diagram",
+      "description": "Entry point that parses command-line arguments and initiates diagram generation from a PR summary file.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+        "agents/pr_analyzer/pr_analyzer.py::main"
+      ],
+      "callees": [
+        "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+        "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "name": "Orchestrate PR analysis",
+      "description": "Clones a PR repository, traces its execution flows, and generates a flow diagram. Returns the diagram content and directory containing analysis results.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_analyzer.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/pr_analyzer.py::analyze_pr"
+      ],
+      "name": "Parse arguments and analyze",
+      "description": "Entry point that validates command-line arguments and executes PR analysis, exiting with appropriate status codes.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_reader/pr_reader.py::_make_output_dir",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr"
+      ],
+      "callees": [],
+      "name": "Create timestamped directory",
+      "description": "Creates a new output directory with a timestamp-based name for storing PR analysis results.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_reader/pr_reader.py::_parse_pr_url",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr"
+      ],
+      "callees": [],
+      "name": "Parse GitHub PR URL",
+      "description": "Extracts owner, repository, and PR number from a GitHub PR URL using regex matching.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_reader/pr_reader.py::_run",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr"
+      ],
+      "callees": [],
+      "name": "Execute subprocess command",
+      "description": "Runs a shell command with error handling, timeout support, and optional environment variables.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_reader/pr_reader.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr"
+      ],
+      "name": "Parse CLI arguments",
+      "description": "Entry point that processes command-line arguments and invokes the PR reader with appropriate options.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+        "agents/pr_analyzer/pr_reader/pr_reader.py::main"
+      ],
+      "callees": [
+        "agents/pr_analyzer/pr_reader/pr_reader.py::_make_output_dir",
+        "agents/pr_analyzer/pr_reader/pr_reader.py::_parse_pr_url",
+        "agents/pr_analyzer/pr_reader/pr_reader.py::_run"
+      ],
+      "name": "Fetch PR metadata and diff",
+      "description": "Orchestrates cloning a repository, fetching PR metadata and diffs, and exporting the information to markdown and patch files.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_load_md",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "callees": [],
+      "name": "Load markdown content",
+      "description": "Reads and returns the text content of a markdown file from the agent configuration directory.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_make_debug_dir",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "callees": [],
+      "name": "Create timestamped debug directory",
+      "description": "Generates a new directory with a timestamp-based name for storing debug output and analysis logs.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_summarize_tool_input",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "callees": [],
+      "name": "Extract tool input summary",
+      "description": "Extracts a concise summary string from tool input data for compact logging representation.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_write_debug_files",
+      "type": "end_point",
+      "callers": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "callees": [],
+      "name": "Write debug output files",
+      "description": "Persists analysis logs, results, and metadata files to the debug output directory with formatted content.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr"
+      ],
+      "name": "Parse CLI and start analysis",
+      "description": "Parses command-line arguments and initiates the PR analysis workflow after validating input.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "type": "process",
+      "callers": [
+        "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::main"
+      ],
+      "callees": [
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::_load_md",
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::_make_debug_dir",
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::_summarize_tool_input",
+        "agents/pr_analyzer/pr_tracer/pr_tracer.py::_write_debug_files"
+      ],
+      "name": "Run AI-powered PR analysis",
+      "description": "Orchestrates the full PR analysis by streaming an AI agent's iterative interaction, collecting results across multiple turns.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls"
+      ],
+      "callees": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_extract_callee_name"
+      ],
+      "name": "Collect function calls",
+      "description": "Recursively walks AST nodes to collect all function calls within a function body, excluding nested function definitions.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_extract_callee_name",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls"
+      ],
+      "callees": [],
+      "name": "Extract called function name",
+      "description": "Extracts the bare function or method name from a call expression node, handling identifiers, attributes, and member expressions.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph"
+      ],
+      "callees": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_walk_for_funcs"
+      ],
+      "name": "Find all file functions",
+      "description": "Finds all named function definitions in a file's AST, returning qualified names (with class context) and their nodes.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph"
+      ],
+      "callees": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls"
+      ],
+      "name": "Get function call map",
+      "description": "Extracts all direct calls from a function body, returning a dictionary mapping call names to whether their return value is used.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_parser",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph"
+      ],
+      "callees": [],
+      "name": "Create language parser",
+      "description": "Creates a tree-sitter parser for the specified language (Python, JavaScript, TypeScript, TSX).",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_iter_source_files",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph"
+      ],
+      "callees": [],
+      "name": "Iterate source files",
+      "description": "Yields all supported source files from a repository path, skipping common non-source directories like node_modules.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_walk_for_funcs",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file"
+      ],
+      "callees": [],
+      "name": "Walk and collect functions",
+      "description": "Recursively traverses an AST to collect all function definitions with their qualified names (including class context) for multiple languages.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/repo_analyzer.py::analyze_repo"
+      ],
+      "callees": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file",
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls",
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_parser",
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_iter_source_files"
+      ],
+      "name": "Build repository call graph",
+      "description": "Analyzes a repository to build a function call graph, classifying functions as start_points, end_points, processes, or orphans based on their call relationships.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_collect_reachable",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams"
+      ],
+      "callees": [],
+      "name": "Collect reachable nodes",
+      "description": "Performs a depth-first search from entry node IDs within a scope to identify all reachable nodes in the call graph.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_text"
+      ],
+      "name": "Format edge syntax",
+      "description": "Formats a single edge between nodes as a Mermaid diagram line, handling labels and arrow styling for returned vs. non-returned edges.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_text"
+      ],
+      "name": "Format node syntax",
+      "description": "Formats a single node as a Mermaid diagram definition with appropriate shape, label, and styling based on node type and sub-diagram status.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node"
+      ],
+      "name": "Render flat diagram",
+      "description": "Generates a complete Mermaid diagram by rendering all nodes and edges in a flat structure without sub-diagram splitting.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name"
+      ],
+      "callees": [],
+      "name": "Sanitize node ID",
+      "description": "Converts a call graph node ID to a valid Mermaid identifier by removing or replacing invalid characters and consolidating underscores.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_text",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node"
+      ],
+      "callees": [],
+      "name": "Escape label text",
+      "description": "Escapes special characters in text to make it safe for use inside Mermaid diagram labels.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit"
+      ],
+      "name": "Split diagram recursively",
+      "description": "Recursively splits a large call graph diagram into a main diagram and sub-diagrams, with special handling for returned vs. non-returned edges to prevent exceeding node limits.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id"
+      ],
+      "name": "Generate sub-diagram name",
+      "description": "Generates a unique, filename-safe name for a sub-diagram based on the root node, avoiding collisions with existing sub-diagram names.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+        "agents/repo_analyzer/rerun_diagrams.py::main"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_collect_reachable",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram"
+      ],
+      "name": "Build mermaid diagrams",
+      "description": "Main entry point that builds a collection of Mermaid diagrams from an enriched call graph, filtering out test and orphan nodes and coordinating the diagram generation process.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram"
+      ],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name"
+      ],
+      "name": "Traverse and partition nodes",
+      "description": "Nested DFS visitor function that recursively traverses nodes and partitions them between main and sub-diagrams based on edge types and size thresholds.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_apply_results",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller"
+      ],
+      "callees": [],
+      "name": "Apply parsed results to edges",
+      "description": "Applies parsed JSON results to edge dictionaries by ID, returning completion count and any errors.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_as_stream",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller"
+      ],
+      "callees": [],
+      "name": "Convert prompt to stream",
+      "description": "Converts a prompt text into an async stream of user message dictionaries for the agent.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_build_prompt",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller"
+      ],
+      "callees": [],
+      "name": "Build analysis prompt",
+      "description": "Constructs a formatted prompt with caller function code and callees for agent edge analysis.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_extract_json_array",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller"
+      ],
+      "callees": [],
+      "name": "Extract JSON from text",
+      "description": "Extracts a JSON array from agent output using regex patterns with fallback strategies.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_load_md",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller"
+      ],
+      "callees": [],
+      "name": "Load markdown file",
+      "description": "Reads and returns the text content of a markdown file from the agent directory.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph"
+      ],
+      "callees": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_apply_results",
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_as_stream",
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_build_prompt",
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_extract_json_array",
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_load_md"
+      ],
+      "name": "Run edge builder agent",
+      "description": "Orchestrates edge analysis for a single caller by querying the agent, extracting results, and populating edges with metadata.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_file_from_id",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph"
+      ],
+      "callees": [],
+      "name": "Extract file path from ID",
+      "description": "Extracts the file path component from a node ID by splitting on the '::' delimiter.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_run_edge",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph"
+      ],
+      "callees": [],
+      "name": "Run with concurrency limit",
+      "description": "Wraps a coroutine execution with a semaphore to enforce concurrent operation limits.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_write_consolidated_log",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph"
+      ],
+      "callees": [],
+      "name": "Write agent results log",
+      "description": "Writes a consolidated log file containing per-item results, errors, and aggregated statistics for batch agent operations.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/repo_analyzer.py::analyze_repo"
+      ],
+      "callees": [
+        "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_file_from_id",
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_run_edge",
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_write_consolidated_log",
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "name": "Enrich graph with agent analysis",
+      "description": "Orchestrates concurrent enrichment of call graph nodes and edges through batched agent processing with rate limiting.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_apply_results",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "callees": [],
+      "name": "Apply parsed results to nodes",
+      "description": "Matches parsed JSON results to node dictionaries by index and updates them with name, description, and tag information. Returns completion count and any errors encountered.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_as_stream",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "callees": [],
+      "name": "Format prompt as message stream",
+      "description": "Converts a prompt string into an async stream of user message dictionaries in the expected format for agent queries.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_build_prompt",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "callees": [],
+      "name": "Build analysis prompt with source",
+      "description": "Constructs a prompt string for the analysis agent by formatting function identifiers and inline source code from a list of node dictionaries.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_extract_json",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "callees": [],
+      "name": "Extract JSON from output text",
+      "description": "Extracts a JSON array from agent output text by searching for JSON in code blocks or as standalone text using regex patterns.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_load_md",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file"
+      ],
+      "callees": [],
+      "name": "Load markdown file contents",
+      "description": "Reads and returns the contents of a markdown file from the agent directory.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph"
+      ],
+      "callees": [
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_apply_results",
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_as_stream",
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_build_prompt",
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_extract_json",
+        "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_load_md"
+      ],
+      "name": "Run node analysis for file",
+      "description": "Orchestrates the entire node analysis workflow: loads system prompt, builds file-specific prompt, queries the Claude agent, extracts results, and applies metadata to nodes. Returns logs and statistics.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/repo_analyzer.py::_clone_repo",
+      "type": "end_point",
+      "callers": [
+        "agents/repo_analyzer/repo_analyzer.py::analyze_repo"
+      ],
+      "callees": [],
+      "name": "Clone git repository",
+      "description": "Executes a git clone command with error handling for missing git executable and timeout conditions.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "type": "process",
+      "callers": [
+        "agents/repo_analyzer/repo_analyzer.py::main"
+      ],
+      "callees": [
+        "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+        "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+        "agents/repo_analyzer/repo_analyzer.py::_clone_repo"
+      ],
+      "name": "Build repository analysis",
+      "description": "Orchestrates the complete analysis workflow: clones a repository, builds its call graph, enriches it with full tree data, and generates JSON results and mermaid diagrams.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/repo_analyzer.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/repo_analyzer/repo_analyzer.py::analyze_repo"
+      ],
+      "name": "Execute CLI analyzer",
+      "description": "Entry point that parses command-line arguments for repository URL and output directory, then initiates the repository analysis workflow.",
+      "tag": "source"
+    },
+    {
+      "id": "agents/repo_analyzer/rerun_diagrams.py::main",
+      "type": "start_point",
+      "callers": [],
+      "callees": [
+        "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams"
+      ],
+      "name": "Generate diagram files",
+      "description": "Reads call graph and start points from JSON files, generates Mermaid diagrams, and writes them to output files in the result directory.",
+      "tag": "source"
+    }
+  ],
+  "edges": [
+    {
+      "from": "agents/integration_points_finder/integration_points_finder.py::find_integration_points",
+      "to": "agents/integration_points_finder/integration_points_finder.py::_load_md",
+      "is_returned": true,
+      "label": "load prompt template",
+      "description": "Loads the prompt template markdown file",
+      "args": "prompt.md",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/integration_points_finder/integration_points_finder.py::find_integration_points",
+      "to": "agents/integration_points_finder/integration_points_finder.py::_summarize_tool_input",
+      "is_returned": true,
+      "label": "summarize tool input",
+      "description": "Creates a concise summary of tool input for logging",
+      "args": "block.input",
+      "condition": "isinstance(block, ToolUseBlock)",
+      "index": 2
+    },
+    {
+      "from": "agents/integration_points_finder/integration_points_finder.py::find_integration_points",
+      "to": "agents/integration_points_finder/integration_points_finder.py::_write_debug_files",
+      "is_returned": true,
+      "label": "write debug files",
+      "description": "Writes debug log files and metadata to disk",
+      "args": "timestamp, log_full, log_short, result_text, message, wall_time",
+      "condition": "if debug",
+      "index": 3
+    },
+    {
+      "from": "agents/integration_points_finder/integration_points_finder.py::main",
+      "to": "agents/integration_points_finder/integration_points_finder.py::find_integration_points",
+      "is_returned": true,
+      "label": "find integration points",
+      "description": "Asynchronously finds integration points in the specified project",
+      "args": "args[0], debug=debug",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+      "to": "agents/pr_analyzer/bot/github_auth.py::generate_jwt",
+      "is_returned": true,
+      "label": "generate JWT",
+      "description": "Generate short-lived JWT for GitHub App authentication using app ID and private key",
+      "args": "app_id, pem",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_client.py::add_reaction",
+      "to": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "is_returned": true,
+      "label": "generate auth headers",
+      "description": "Generate authorization headers with the provided token",
+      "args": "token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_client.py::delete_comment",
+      "to": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "is_returned": true,
+      "label": "construct auth headers",
+      "description": "Creates authentication headers by combining base headers with an authorization token",
+      "args": "token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_client.py::has_write_permission",
+      "to": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "is_returned": true,
+      "label": "get auth headers",
+      "description": "Generates authentication headers with the provided token",
+      "args": "token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+      "to": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "is_returned": true,
+      "label": "build auth headers",
+      "description": "generates authorization headers with the provided token for the API request",
+      "args": "token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/github_client.py::update_comment",
+      "to": "agents/pr_analyzer/bot/github_client.py::_auth_headers",
+      "is_returned": true,
+      "label": "build auth headers",
+      "description": "Constructs authentication headers by combining base headers with the provided token",
+      "args": "token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+      "is_returned": true,
+      "label": "get installation token",
+      "description": "Exchange JWT for an installation access token",
+      "args": "app_id=GITHUB_APP_ID, pem=secrets['private_key'], installation_id=installation_id",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/handler.py::_update_or_post",
+      "is_returned": true,
+      "label": "post result comment",
+      "description": "Update the analyzing comment with result or post new comment",
+      "args": "token, owner, repo, pr_number, analyzing_comment_id, body",
+      "condition": null,
+      "index": 7
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "fetch app secrets",
+      "description": "Fetch GitHub App secrets from AWS Secrets Manager",
+      "args": "(none)",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+      "is_returned": true,
+      "label": "complete analysis",
+      "description": "Update analysis record with result path, cost, and finished_at timestamp",
+      "args": "analysis_id, result_path, cost",
+      "condition": "if analysis_id",
+      "index": 6
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::parse_cost",
+      "is_returned": true,
+      "label": "parse cost data",
+      "description": "Sum cost_usd from cost files in result directory",
+      "args": "result_dir",
+      "condition": "if analysis_id",
+      "index": 5
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files",
+      "is_returned": true,
+      "label": "upload analysis files",
+      "description": "Upload analysis output files to Supabase storage",
+      "args": "analysis_id, result_dir",
+      "condition": "if analysis_id",
+      "index": 4
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "to": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "is_returned": true,
+      "label": "run PR analysis",
+      "description": "Run the full analysis pipeline to clone repo, trace flows, and generate diagram",
+      "args": "pr_url=pr_url, output_dir=Path('/tmp'), gh_token=token, analysis_id=analysis_id",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/github_auth.py::get_installation_token",
+      "is_returned": true,
+      "label": "get installation token",
+      "description": "Exchange JWT for GitHub App installation access token",
+      "args": "app_id=GITHUB_APP_ID, pem=secrets['private_key'], installation_id",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/github_client.py::delete_comment",
+      "is_returned": true,
+      "label": "delete comment",
+      "description": "Delete the /unslop_analyze command comment before analysis",
+      "args": "token, owner, repo, comment_id",
+      "condition": "in try block",
+      "index": 8
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/github_client.py::has_write_permission",
+      "is_returned": true,
+      "label": "has write permission",
+      "description": "Check if user has write or higher permission on repository",
+      "args": "token, owner, repo, github_username",
+      "condition": null,
+      "index": 5
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+      "is_returned": true,
+      "label": "post pr comment",
+      "description": "Post analyzing status message and capture comment ID for updates",
+      "args": "token, owner, repo, pr_number, analyzing message",
+      "condition": "in try block",
+      "index": 8
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/handler.py::_verify_signature",
+      "is_returned": true,
+      "label": "verify webhook signature",
+      "description": "Verify webhook request is authentic using HMAC-SHA256",
+      "args": "raw_body, signature, webhook_secret",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "fetch app secrets",
+      "description": "Retrieve GitHub App secrets from AWS Secrets Manager",
+      "args": "()",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+      "is_returned": true,
+      "label": "create analysis",
+      "description": "Create analysis record in Supabase",
+      "args": "supabase_user_id, repository_id",
+      "condition": null,
+      "index": 7
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id",
+      "is_returned": true,
+      "label": "get supabase user id",
+      "description": "Look up Supabase user ID from GitHub user ID",
+      "args": "github_user_id",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_update_or_post",
+      "to": "agents/pr_analyzer/bot/github_client.py::post_pr_comment",
+      "is_returned": true,
+      "label": "post comment",
+      "description": "Post a new comment to the PR as fallback if first attempt fails",
+      "args": "token, owner, repo, pr_number, body",
+      "condition": "except Exception",
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::_update_or_post",
+      "to": "agents/pr_analyzer/bot/github_client.py::update_comment",
+      "is_returned": true,
+      "label": "update comment",
+      "description": "Update an existing PR comment",
+      "args": "token, owner, repo, comment_id, body",
+      "condition": "if comment_id",
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::handler",
+      "to": "agents/pr_analyzer/bot/handler.py::_handle_analyze",
+      "is_returned": true,
+      "label": "run analysis",
+      "description": "Execute full PR analysis and post results",
+      "args": "(event, context)",
+      "condition": "event.get(\"action\") == \"analyze\"",
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/handler.py::handler",
+      "to": "agents/pr_analyzer/bot/handler.py::_handle_webhook",
+      "is_returned": true,
+      "label": "validate webhook",
+      "description": "Validate webhook and trigger analysis",
+      "args": "(event, context)",
+      "condition": "\"headers\" in event",
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "get github secrets",
+      "description": "Retrieve GitHub App secrets from AWS Secrets Manager",
+      "args": "",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::complete_analysis",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::_headers",
+      "is_returned": true,
+      "label": "create headers",
+      "description": "Create headers dictionary for Supabase API authentication",
+      "args": "secrets[\"supabase_key\"]",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "fetch app secrets",
+      "description": "Retrieve GitHub App secrets from AWS Secrets Manager with in-memory caching",
+      "args": "",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::create_analysis",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::_headers",
+      "is_returned": true,
+      "label": "build auth headers",
+      "description": "Create Supabase authorization headers with API key and Bearer token",
+      "args": "secrets[\"supabase_key\"]",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "fetch secrets",
+      "description": "Retrieves GitHub App secrets from AWS Secrets Manager with in-memory caching",
+      "args": "",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::get_supabase_user_id",
+      "to": "agents/pr_analyzer/bot/supabase_client.py::_headers",
+      "is_returned": true,
+      "label": "build headers",
+      "description": "Creates HTTP headers dictionary with API key and Bearer token for Supabase request",
+      "args": "secrets['supabase_key']",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/bot/supabase_client.py::upload_analysis_files",
+      "to": "agents/pr_analyzer/bot/secrets.py::get_github_app_secrets",
+      "is_returned": true,
+      "label": "fetch GitHub secrets",
+      "description": "Retrieves GitHub App secrets from AWS Secrets Manager containing Supabase authentication credentials",
+      "args": "",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_d2_text",
+      "is_returned": true,
+      "label": "sanitize description",
+      "description": "Sanitizes the description text for D2 diagram format by replacing special characters",
+      "args": "args.get(\"description\", \"\")",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_edge_tool",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_id",
+      "is_returned": true,
+      "label": "sanitize to id",
+      "description": "Converts the target node name to a valid D2 identifier",
+      "args": "to_name",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_d2_text",
+      "is_returned": true,
+      "label": "escape description",
+      "description": "sanitizes the description for D2 diagram syntax",
+      "args": "args.get(\"description\", \"\")",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::add_node_tool",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_sanitize_id",
+      "is_returned": true,
+      "label": "create identifier",
+      "description": "converts the node name to a valid D2 identifier",
+      "args": "name",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_as_stream",
+      "is_returned": true,
+      "label": "wrap prompt stream",
+      "description": "Wrap string prompt as async iterator for MCP server compatibility",
+      "args": "prompt",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_build_d2",
+      "is_returned": true,
+      "label": "build diagram content",
+      "description": "Generate d2 diagram content from nodes and edges",
+      "args": "nodes, edges",
+      "condition": "if nodes",
+      "index": 7
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_load_md",
+      "is_returned": true,
+      "label": "load prompt template",
+      "description": "Load prompt template from markdown file",
+      "args": "\"prompt.md\"",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_debug_dir",
+      "is_returned": true,
+      "label": "create debug directory",
+      "description": "Create debug output directory with timestamp",
+      "args": "",
+      "condition": null,
+      "index": 8
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_make_tools",
+      "is_returned": true,
+      "label": "create diagram tools",
+      "description": "Create add_node and add_edge tools for MCP server",
+      "args": "nodes, edges",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_summarize_tool_input",
+      "is_returned": true,
+      "label": "summarize tool input",
+      "description": "Create summary text for tool input display",
+      "args": "block.input",
+      "condition": "isinstance(block, ToolUseBlock)",
+      "index": 4
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::_write_debug_files",
+      "is_returned": true,
+      "label": "write debug logs",
+      "description": "Write agent execution logs and metadata to debug files",
+      "args": "out_dir=out_dir, log_full=log_full, log_short=log_short, result_text=result_text, message=message, wall_time=time.time() - start_time",
+      "condition": "if debug",
+      "index": 6
+    },
+    {
+      "from": "agents/pr_analyzer/diagram_generator/diagram_generator.py::main",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "is_returned": true,
+      "label": "generate diagram",
+      "description": "Generates D2 diagram from PR summary and project code analysis",
+      "args": "pr_summary, args[0], debug=debug",
+      "condition": null,
+      "index": 5
+    },
+    {
+      "from": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "to": "agents/pr_analyzer/diagram_generator/diagram_generator.py::generate_diagram",
+      "is_returned": true,
+      "label": "generate flow diagram",
+      "description": "Generate D2 flow diagram from PR analysis",
+      "args": "pr_summary, project_path, pr_dir, debug, debug_dir",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "to": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "is_returned": true,
+      "label": "clone and read PR",
+      "description": "Clone repository and fetch PR metadata and diff",
+      "args": "pr_url, output_dir, gh_token",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "is_returned": true,
+      "label": "summarize PR execution",
+      "description": "Analyze PR execution flows and generate summary",
+      "args": "project_path, pr_dir, debug, debug_dir",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/pr_analyzer.py::main",
+      "to": "agents/pr_analyzer/pr_analyzer.py::analyze_pr",
+      "is_returned": true,
+      "label": "analyze PR",
+      "description": "Analyzes the pull request from the provided URL and returns the analysis result",
+      "args": "sys.argv[1]",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/pr_reader/pr_reader.py::main",
+      "to": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "is_returned": true,
+      "label": "read PR",
+      "description": "Retrieve pull request metadata, diff, and clone repository for analysis",
+      "args": "pr_url, output_dir=output_dir",
+      "condition": null,
+      "index": 5
+    },
+    {
+      "from": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "to": "agents/pr_analyzer/pr_reader/pr_reader.py::_make_output_dir",
+      "is_returned": true,
+      "label": "parse PR URL",
+      "description": "Parses GitHub PR URL to extract owner, repository name, and PR number",
+      "args": "pr_url",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "to": "agents/pr_analyzer/pr_reader/pr_reader.py::_parse_pr_url",
+      "is_returned": true,
+      "label": "create output directory",
+      "description": "Creates a timestamped output directory for storing analysis results",
+      "args": "",
+      "condition": "if not output_dir",
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/pr_reader/pr_reader.py::read_pr",
+      "to": "agents/pr_analyzer/pr_reader/pr_reader.py::_run",
+      "is_returned": true,
+      "label": "clone repository",
+      "description": "Clones the GitHub repository to a local directory for analysis",
+      "args": "gh repo clone {owner}/{repo}, timeout=300",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/pr_tracer/pr_tracer.py::main",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "is_returned": true,
+      "label": "analyze pull request",
+      "description": "Analyzes the pull request using the Claude Agent API and returns a summary of changes",
+      "args": "args[0], args[1], debug=debug",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_load_md",
+      "is_returned": true,
+      "label": "load prompt template",
+      "description": "Load prompt template markdown file",
+      "args": "\"prompt.md\"",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_make_debug_dir",
+      "is_returned": true,
+      "label": "make debug directory",
+      "description": "Create debug output directory with timestamp",
+      "args": "",
+      "condition": "debug and not debug_dir",
+      "index": 3
+    },
+    {
+      "from": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_summarize_tool_input",
+      "is_returned": true,
+      "label": "summarize tool input",
+      "description": "Summarize tool use input for display",
+      "args": "block.input",
+      "condition": "isinstance(block, ToolUseBlock)",
+      "index": 2
+    },
+    {
+      "from": "agents/pr_analyzer/pr_tracer/pr_tracer.py::summarize_pr",
+      "to": "agents/pr_analyzer/pr_tracer/pr_tracer.py::_write_debug_files",
+      "is_returned": true,
+      "label": "write debug files",
+      "description": "Write debug logs and info to output directory",
+      "args": "out_dir, log_full, log_short, result_text, message, wall_time",
+      "condition": "debug",
+      "index": 4
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_extract_callee_name",
+      "is_returned": true,
+      "label": "extract callee name",
+      "description": "Extract the function or method name from a call expression node",
+      "args": "node, lang",
+      "condition": "if is_call",
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_walk_for_funcs",
+      "is_returned": true,
+      "label": "walk for functions",
+      "description": "Recursively walk the AST to collect function definitions with class context",
+      "args": "root, lang, results, class_stack=[]",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_collect_calls",
+      "is_returned": true,
+      "label": "collect calls",
+      "description": "Recursively collect function calls from child node",
+      "args": "child, calls, lang",
+      "condition": "body is None",
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_find_functions_in_file",
+      "is_returned": true,
+      "label": "extract function definitions",
+      "description": "Find all named function definitions and return (qualified_name, node) pairs",
+      "args": "tree.root_node, lang",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_direct_calls",
+      "is_returned": true,
+      "label": "extract direct calls",
+      "description": "Get all function call names with is_returned flag from function body",
+      "args": "func_node, lang",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_get_parser",
+      "is_returned": true,
+      "label": "create language parser",
+      "description": "Get a tree-sitter parser instance for the specified language",
+      "args": "lang",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::_iter_source_files",
+      "is_returned": true,
+      "label": "iterate source files",
+      "description": "Yield all supported source files, skipping non-source directories",
+      "args": "repo_path",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+      "is_returned": true,
+      "label": "sanitize from identifier",
+      "description": "Converts from_id to a valid mermaid identifier by removing special characters and collapsing underscores",
+      "args": "from_id",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_text",
+      "is_returned": true,
+      "label": "sanitize to identifier",
+      "description": "Converts to_id to a valid mermaid identifier by removing special characters and collapsing underscores",
+      "args": "to_id",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+      "is_returned": true,
+      "label": "sanitize id",
+      "description": "Convert a call graph node ID to a valid mermaid identifier",
+      "args": "node['id']",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_text",
+      "is_returned": true,
+      "label": "sanitize text",
+      "description": "Sanitize text for use inside mermaid labels",
+      "args": "node.get('name') or node['id'].split('::')[-1]",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+      "is_returned": true,
+      "label": "format edge",
+      "description": "Formats an edge as a mermaid edge line",
+      "args": "e['from'], e['to'], e",
+      "condition": "if e['to'] in node_ids and key not in emitted",
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+      "is_returned": true,
+      "label": "format node",
+      "description": "Formats a node as a mermaid node definition line",
+      "args": "node, has_sub=nid in roots",
+      "condition": "if node",
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_edge",
+      "is_returned": true,
+      "label": "format edge as mermaid",
+      "description": "Renders an edge in the main diagram as a mermaid edge definition line",
+      "args": "e['from'], e['to'], e",
+      "condition": "if key not in emitted_edges",
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_mermaid_node",
+      "is_returned": true,
+      "label": "format target node as mermaid",
+      "description": "Renders a target node as a mermaid node definition if not already emitted",
+      "args": "node, has_sub=target in sub_roots",
+      "condition": "if target not in emitted_nodes and node",
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit",
+      "is_returned": true,
+      "label": "visit non-returned target",
+      "description": "Recursively visits target node from a non-returned edge",
+      "args": "e['to']",
+      "condition": null,
+      "index": 5
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_sanitize_id",
+      "is_returned": true,
+      "label": "sanitize name",
+      "description": "Convert root_id segment to filename-safe identifier by removing special characters",
+      "args": "root_id.split(\"::\")[-1]",
+      "condition": "else",
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_collect_reachable",
+      "is_returned": true,
+      "label": "collect reachable nodes",
+      "description": "Performs DFS from start points to find all reachable nodes in the call graph",
+      "args": "start_points, edge_index, all_node_ids",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+      "is_returned": true,
+      "label": "render flat diagram",
+      "description": "Renders all reachable nodes and edges as a single flat mermaid diagram",
+      "args": "reachable, edge_index, node_index",
+      "condition": "if len(reachable) <= MAX_NODES_PER_DIAGRAM",
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "is_returned": true,
+      "label": "split into diagrams",
+      "description": "Splits the call graph into a main diagram and sub-diagrams when it exceeds the node threshold",
+      "args": "start_points, edge_index, node_index, reachable",
+      "condition": "if len(reachable) > MAX_NODES_PER_DIAGRAM",
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_render_flat",
+      "is_returned": true,
+      "label": "visit inline edges",
+      "description": "Recursively visit the target node of an inline edge",
+      "args": "e[\"to\"]",
+      "condition": "if nid in inline",
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_split_diagram",
+      "is_returned": true,
+      "label": "visit non-returned edges",
+      "description": "Recursively visit the target node of a non-returned edge",
+      "args": "e[\"to\"]",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/diagram_builder/diagram_builder.py::visit",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::_unique_sub_name",
+      "is_returned": true,
+      "label": "generate sub-diagram name",
+      "description": "Generate a unique filename-safe name for the sub-diagram",
+      "args": "nid, node_index, sub_diagrams",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_apply_results",
+      "is_returned": true,
+      "label": "apply results",
+      "description": "Applies parsed JSON results to edge dictionaries by id, returning count of completed edges and any errors",
+      "args": "edges, result_json",
+      "condition": "result_json",
+      "index": 4
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_as_stream",
+      "is_returned": true,
+      "label": "convert to stream",
+      "description": "Converts the prompt text to an async generator stream format with user message structure",
+      "args": "prompt",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_build_prompt",
+      "is_returned": true,
+      "label": "build prompt",
+      "description": "Builds the complete prompt text containing caller function source and all callees with their sources",
+      "args": "caller_id, caller_source, callees",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_extract_json_array",
+      "is_returned": true,
+      "label": "extract JSON array",
+      "description": "Extracts and parses a JSON array from the agent's text output using regex patterns",
+      "args": "full_text",
+      "condition": "not message.is_error",
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::_load_md",
+      "is_returned": true,
+      "label": "load system prompt",
+      "description": "Reads the system prompt markdown file from the agents directory",
+      "args": "\"system_prompt.md\"",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "to": "agents/repo_analyzer/full_graph_builder/edge_builder/edge_builder.py::run_edge_builder_for_caller",
+      "is_returned": true,
+      "label": "run edge builder",
+      "description": "Runs the edge_builder agent to enrich edge properties for all edges from a single caller",
+      "args": "caller_id, caller_source, edges, node_index",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "to": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_file_from_id",
+      "is_returned": true,
+      "label": "extract file path",
+      "description": "Extracts file path from node ID by splitting on '::' delimiter",
+      "args": "node[\"id\"]",
+      "condition": "if node.get(\"source\")",
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "to": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_run_edge",
+      "is_returned": true,
+      "label": "rate-limit edge builder",
+      "description": "Wraps edge builder coroutine with semaphore for rate limiting across concurrent edge enrichment",
+      "args": "coroutine from run_edge_builder_for_caller",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "to": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::_write_consolidated_log",
+      "is_returned": true,
+      "label": "write consolidated log",
+      "description": "Writes consolidated log file with per-agent sections and summary statistics",
+      "args": "output_dir / \"node_builder.log\", node_results, \"node_builder\"",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "is_returned": true,
+      "label": "run node builder",
+      "description": "Runs the node_builder agent to enrich node properties for all nodes in a source file",
+      "args": "file_path, nodes",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_apply_results",
+      "is_returned": true,
+      "label": "apply results",
+      "description": "Apply parsed JSON results to node dicts by index, returning count of completed nodes and any errors",
+      "args": "nodes, result_json",
+      "condition": "if result_json is not None",
+      "index": 4
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_as_stream",
+      "is_returned": true,
+      "label": "create stream",
+      "description": "Create an async stream with the prompt as a user message for the query",
+      "args": "prompt",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_build_prompt",
+      "is_returned": true,
+      "label": "build prompt",
+      "description": "Build the prompt for the node_builder agent with inline source code from nodes",
+      "args": "file_path, nodes",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_extract_json",
+      "is_returned": true,
+      "label": "extract JSON",
+      "description": "Extract and parse JSON array from the agent's text output",
+      "args": "full_text",
+      "condition": "if not message.is_error",
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::run_node_builder_for_file",
+      "to": "agents/repo_analyzer/full_graph_builder/node_builder/node_builder.py::_load_md",
+      "is_returned": true,
+      "label": "load markdown",
+      "description": "Load the system prompt markdown file",
+      "args": "\"system_prompt.md\"",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "to": "agents/repo_analyzer/call_graph_builder/call_graph_builder.py::build_call_graph",
+      "is_returned": true,
+      "label": "build call graph",
+      "description": "Build a function call graph by analyzing the cloned repository",
+      "args": "repo_dir",
+      "condition": null,
+      "index": 1
+    },
+    {
+      "from": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "is_returned": true,
+      "label": "build diagrams",
+      "description": "Generate mermaid diagrams from the enriched call graph",
+      "args": "call_graph, start_points",
+      "condition": null,
+      "index": 3
+    },
+    {
+      "from": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "to": "agents/repo_analyzer/full_graph_builder/full_graph_builder.py::build_full_graph",
+      "is_returned": true,
+      "label": "enrich call graph",
+      "description": "Enrich nodes and edges in the call graph with LLM analysis",
+      "args": "call_graph, str(repo_dir), output_dir=result_dir",
+      "condition": null,
+      "index": 2
+    },
+    {
+      "from": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "to": "agents/repo_analyzer/repo_analyzer.py::_clone_repo",
+      "is_returned": true,
+      "label": "clone repository",
+      "description": "Clone a git repository to the specified destination directory",
+      "args": "repo_url, repo_dir",
+      "condition": null,
+      "index": 0
+    },
+    {
+      "from": "agents/repo_analyzer/repo_analyzer.py::main",
+      "to": "agents/repo_analyzer/repo_analyzer.py::analyze_repo",
+      "is_returned": true,
+      "label": "analyze repository",
+      "description": "Analyzes the repository at the given URL to build its function call graph, producing call_graph.json, start_points.json, end_points.json, orphans.json, and mermaid diagrams",
+      "args": "repo_url, output_dir=output_dir",
+      "condition": null,
+      "index": 4
+    },
+    {
+      "from": "agents/repo_analyzer/rerun_diagrams.py::main",
+      "to": "agents/repo_analyzer/diagram_builder/diagram_builder.py::build_diagrams",
+      "is_returned": true,
+      "label": "build diagrams",
+      "description": "Build mermaid diagrams from enriched call graph and start points",
+      "args": "call_graph, start_points",
+      "condition": null,
+      "index": 0
+    }
+  ]
+}

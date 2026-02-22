@@ -1,0 +1,20 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_as_stream(["Wrap prompt as async stream"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_build_d2(["Generate d2 diagram content"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_load_md(["Load markdown file"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_make_debug_dir(["Create timestamped debug directory"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_make_tools(["Create diagram building tools"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_summarize_tool_input(["Summarize tool input for logging"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_write_debug_files(["Write debug output files"]):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram["Generate execution flow diagram"]:::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_main("Parse arguments and generate diagram"):::transparent
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"wrap prompt stream"| agents_pr_analyzer_diagram_generator_diagram_generator_py_as_stream
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"build diagram content"| agents_pr_analyzer_diagram_generator_diagram_generator_py_build_d2
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"load prompt template"| agents_pr_analyzer_diagram_generator_diagram_generator_py_load_md
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"create debug directory"| agents_pr_analyzer_diagram_generator_diagram_generator_py_make_debug_dir
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"create diagram tools"| agents_pr_analyzer_diagram_generator_diagram_generator_py_make_tools
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"summarize tool input"| agents_pr_analyzer_diagram_generator_diagram_generator_py_summarize_tool_input
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram -.->|"write debug logs"| agents_pr_analyzer_diagram_generator_diagram_generator_py_write_debug_files
+    agents_pr_analyzer_diagram_generator_diagram_generator_py_main -.->|"generate diagram"| agents_pr_analyzer_diagram_generator_diagram_generator_py_generate_diagram

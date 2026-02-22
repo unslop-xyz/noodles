@@ -1,0 +1,31 @@
+graph LR
+    classDef solid fill:#e0e0e0,stroke:#333,color:#000
+    classDef transparent fill:none,stroke:#333,color:#000
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_collect_reachable(["Collect reachable nodes"]):::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_edge["Format edge syntax"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_node["Format node syntax"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_render_flat["Render flat diagram"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_id(["Sanitize node ID"]):::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_text(["Escape label text"]):::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram["Split diagram recursively"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_unique_sub_name["Generate sub-diagram name"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams["Build mermaid diagrams"]:::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_visit["Traverse and partition nodes"]:::transparent
+    agents_repo_analyzer_rerun_diagrams_py_main("Generate diagram files"):::transparent
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_edge -.->|"sanitize from identifier"| agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_id
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_edge -.->|"sanitize to identifier"| agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_text
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_node -.->|"sanitize id"| agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_id
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_node -.->|"sanitize text"| agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_text
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_render_flat -.->|"format edge"| agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_edge
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_render_flat -.->|"format node"| agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_node
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram -.->|"format edge as mermaid"| agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_edge
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram -.->|"format target node as mermaid"| agents_repo_analyzer_diagram_builder_diagram_builder_py_mermaid_node
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram -.->|"visit non-returned target"| agents_repo_analyzer_diagram_builder_diagram_builder_py_visit
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_unique_sub_name -.->|"sanitize name"| agents_repo_analyzer_diagram_builder_diagram_builder_py_sanitize_id
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams -.->|"collect reachable nodes"| agents_repo_analyzer_diagram_builder_diagram_builder_py_collect_reachable
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams -.->|"render flat diagram"| agents_repo_analyzer_diagram_builder_diagram_builder_py_render_flat
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams -.->|"split into diagrams"| agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_visit -.->|"visit inline edges"| agents_repo_analyzer_diagram_builder_diagram_builder_py_render_flat
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_visit -.->|"visit non-returned edges"| agents_repo_analyzer_diagram_builder_diagram_builder_py_split_diagram
+    agents_repo_analyzer_diagram_builder_diagram_builder_py_visit -.->|"generate sub-diagram name"| agents_repo_analyzer_diagram_builder_diagram_builder_py_unique_sub_name
+    agents_repo_analyzer_rerun_diagrams_py_main -.->|"build diagrams"| agents_repo_analyzer_diagram_builder_diagram_builder_py_build_diagrams
