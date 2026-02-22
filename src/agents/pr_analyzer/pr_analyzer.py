@@ -136,6 +136,38 @@ def _parse_pr_url(pr_url: str) -> tuple[str, str, int]:
     return match.group(1), match.group(2), int(match.group(3))
 
 
+def _find_base_commit(
+    owner: str,
+    repo: str,
+    pr_number: int,
+    repo_dir: Path,
+) -> str | None:
+    """Find the correct base commit for comparing a PR.
+
+    For merged PRs, uses the first parent of the merge commit (the state of
+    the target branch just before the merge). For open PRs, uses the standard
+    merge-base between PR head and the default branch.
+    """
+    # Check if PR is merged and get the merge commit SHA
+    merge_commit_sha = _git_output(
+        ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}",
+         "--jq", 'if .merged then .merge_commit_sha else "" end'],
+    )
+
+    if merge_commit_sha:
+        # Merged PR: first parent of merge commit = base before merge
+        base = _git_output(
+            ["git", "rev-parse", f"{merge_commit_sha}^1"], cwd=repo_dir
+        )
+        if base:
+            return base
+
+    # Open PR (or fallback): standard merge-base
+    return _git_output(
+        ["git", "merge-base", "pr_head", "origin/HEAD"], cwd=repo_dir
+    )
+
+
 def _clone_and_setup(
     owner: str,
     repo: str,
@@ -170,10 +202,11 @@ def _clone_and_setup(
     ):
         return None
 
-    # Find the fork point: common ancestor of PR head and default branch
-    merge_base = _git_output(
-        ["git", "merge-base", "pr_head", "origin/HEAD"], cwd=repo_dir
-    )
+    # Find the base commit to compare against.
+    # For merged PRs, merge-base(pr_head, origin/HEAD) == pr_head itself
+    # (since pr_head is now an ancestor of main), so we use the first parent
+    # of the merge commit instead — the state of main just before the merge.
+    merge_base = _find_base_commit(owner, repo, pr_number, repo_dir)
     if merge_base is None:
         print("Error: could not determine merge base.", file=sys.stderr)
         return None
@@ -299,4 +332,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

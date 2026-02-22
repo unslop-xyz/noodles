@@ -5,22 +5,27 @@ new/updated/unchanged by comparing with the base branch, and prunes
 the graph to only include nodes transitively connected to changed functions.
 """
 
-import sys
+import importlib.util
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Import tree-sitter helpers from repo_analyzer's call_graph_builder
-REPO_ANALYZER_DIR = Path(__file__).resolve().parents[2] / "repo_analyzer"
-sys.path.insert(0, str(REPO_ANALYZER_DIR))
-
-from call_graph_builder.call_graph_builder import (  # noqa: E402
-    EXTENSION_TO_LANG,
-    _find_functions_in_file,
-    _get_parser,
-    _iter_source_files,
-    build_call_graph,
+# Import tree-sitter helpers from repo_analyzer's call_graph_builder.
+# Use importlib to avoid circular import (both modules share the same
+# fully-qualified name "call_graph_builder.call_graph_builder").
+_REPO_CG_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "repo_analyzer" / "call_graph_builder" / "call_graph_builder.py"
 )
+_spec = importlib.util.spec_from_file_location("_repo_call_graph_builder", _REPO_CG_PATH)
+_repo_cg = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_repo_cg)
+
+EXTENSION_TO_LANG = _repo_cg.EXTENSION_TO_LANG
+_find_functions_in_file = _repo_cg._find_functions_in_file
+_get_parser = _repo_cg._get_parser
+_iter_source_files = _repo_cg._iter_source_files
+build_call_graph = _repo_cg.build_call_graph
 
 
 @dataclass
@@ -196,7 +201,23 @@ def _prune_graph(
     forward_reached = _bfs_reach(seeds, forward_adj, all_node_ids)
     backward_reached = _bfs_reach(seeds, reverse_adj, all_node_ids)
 
-    retained = forward_reached | backward_reached
+    # Only keep edges on paths through changed nodes.
+    # An edge A→B is on such a path if both endpoints are in the same
+    # directional set: both upstream of a seed (backward) or both
+    # downstream (forward). This drops cross-edges like W→Z where W is
+    # only upstream and Z is only downstream.
+    retained_edges = [
+        e for e in edges
+        if (e["from"] in backward_reached and e["to"] in backward_reached)
+        or (e["from"] in forward_reached and e["to"] in forward_reached)
+    ]
+
+    # Retain nodes that participate in at least one path-relevant edge,
+    # plus seeds themselves (even if isolated).
+    retained: set[str] = set(seeds)
+    for e in retained_edges:
+        retained.add(e["from"])
+        retained.add(e["to"])
 
     # Filter nodes
     retained_nodes = []
@@ -225,11 +246,6 @@ def _prune_graph(
         }
         retained_nodes.append(pruned_node)
         node_by_id[nid] = pruned_node
-
-    # Filter edges
-    retained_edges = [
-        e for e in edges if e["from"] in retained and e["to"] in retained
-    ]
 
     # Reclassify node types based on pruned connectivity
     start_points, end_points, orphans = _reclassify_nodes(
