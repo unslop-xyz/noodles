@@ -11,3 +11,4 @@ dist/
 /.vscode
 .unslop/
 .DS_Store
+result_*/
