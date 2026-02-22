@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from node_builder.node_builder import run_node_builder_for_file
 from edge_builder.edge_builder import run_edge_builder_for_caller
 
-MAX_CONCURRENT_AGENTS = 10
+MAX_CONCURRENT_AGENTS = 20
 
 
 def _print_progress(label: str, done: int, total: int) -> None:

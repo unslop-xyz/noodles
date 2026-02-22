@@ -1,27 +1,30 @@
-"""Node builder agent — describes nodes in a call graph with human-readable names, descriptions, and tags.
+"""Node builder — describes nodes in a call graph with human-readable names, descriptions, and tags.
 
-One agent per source file, processing all functions in that file at once.
+One API call per source file, processing all functions in that file at once.
 Source code is embedded in the prompt (no Read tool needed).
+Uses the Anthropic API directly for minimal overhead.
 """
 
 import json
 import re
 import time
-from collections.abc import AsyncIterator
 from pathlib import Path
 
-from claude_agent_sdk import (
-    AssistantMessage,
-    ClaudeAgentOptions,
-    ResultMessage,
-    TextBlock,
-    ToolUseBlock,
-    UserMessage,
-    query,
-)
+import anthropic
 
 AGENT_DIR = Path(__file__).parent
 AGENT_NAME = "node_builder"
+MODEL = "claude-haiku-4-5-20251001"
+
+_client: anthropic.AsyncAnthropic | None = None
+
+
+def _get_client() -> anthropic.AsyncAnthropic:
+    """Lazily create a shared async client."""
+    global _client
+    if _client is None:
+        _client = anthropic.AsyncAnthropic()
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +32,7 @@ AGENT_NAME = "node_builder"
 # ---------------------------------------------------------------------------
 
 def _build_prompt(file_path: str, nodes: list[dict]) -> str:
-    """Build the prompt for a single-file node_builder agent with inline source."""
+    """Build the prompt for a single-file node_builder with inline source."""
     parts: list[str] = [
         f"Analyze these functions from `{file_path}` and output a JSON array.\n",
     ]
@@ -66,7 +69,7 @@ def _apply_results(nodes: list[dict], result_json: list[dict]) -> tuple[int, lis
 
 
 def _extract_json(text: str) -> list[dict] | None:
-    """Extract a JSON array from agent text output."""
+    """Extract a JSON array from text output."""
     match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
     if match:
         try:
@@ -83,29 +86,20 @@ def _extract_json(text: str) -> list[dict] | None:
 
 
 # ---------------------------------------------------------------------------
-# Agent runner
+# API caller
 # ---------------------------------------------------------------------------
 
 def _load_md(filename: str) -> str:
     return (AGENT_DIR / filename).read_text()
 
 
-async def _as_stream(prompt_text: str) -> AsyncIterator[dict]:
-    yield {
-        "type": "user",
-        "session_id": "",
-        "message": {"role": "user", "content": prompt_text},
-        "parent_tool_use_id": None,
-    }
-
-
 async def run_node_builder_for_file(
     file_path: str,
     nodes: list[dict],
 ) -> dict:
-    """Run the node_builder agent for all nodes in a single source file.
+    """Run the node_builder for all nodes in a single source file.
 
-    Source code is embedded inline in the prompt — no Read tool needed.
+    Source code is embedded inline in the prompt.
     Applies results (name, description, tag) directly to each node dict.
 
     Returns a dict with log lines and stats for consolidated logging.
@@ -113,50 +107,44 @@ async def run_node_builder_for_file(
     system_prompt = _load_md("system_prompt.md")
     prompt = _build_prompt(file_path, nodes)
 
-    options = ClaudeAgentOptions(
-        model="haiku",
-        system_prompt=system_prompt,
-        allowed_tools=[],
-        permission_mode="bypassPermissions",
-        max_turns=1,
-    )
-
-    log_lines: list[str] = []
-    all_text: list[str] = []
     start_time = time.time()
     errors: list[str] = []
-    stats = {"duration_ms": 0, "cost_usd": 0.0, "num_turns": 0}
+    log_lines: list[str] = []
+    stats = {"duration_ms": 0, "cost_usd": 0.0, "num_turns": 1}
 
     try:
-        async for message in query(prompt=_as_stream(prompt), options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        log_lines.append(block.text)
-                        all_text.append(block.text)
+        client = _get_client()
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": prompt}],
+        )
 
-            elif isinstance(message, ResultMessage):
-                stats["duration_ms"] = message.duration_ms or 0
-                stats["cost_usd"] = message.total_cost_usd or 0.0
-                stats["num_turns"] = message.num_turns or 0
+        full_text = "".join(
+            block.text for block in response.content if block.type == "text"
+        )
+        log_lines.append(full_text)
 
-                if message.is_error:
-                    errors.append(f"Agent error: {message.result}")
-                else:
-                    full_text = "\n".join(all_text)
-                    result_json = _extract_json(full_text)
-                    if result_json:
-                        completed, apply_errors = _apply_results(nodes, result_json)
-                        errors.extend(apply_errors)
-                        log_lines.append(f"Applied {completed}/{len(nodes)} nodes")
-                    else:
-                        errors.append("Could not parse JSON from agent output")
+        # Compute cost from usage
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
+        # Haiku pricing: $0.80/M input, $4/M output
+        stats["cost_usd"] = (input_tokens * 0.80 + output_tokens * 4.0) / 1_000_000
+
+        result_json = _extract_json(full_text)
+        if result_json:
+            completed, apply_errors = _apply_results(nodes, result_json)
+            errors.extend(apply_errors)
+            log_lines.append(f"Applied {completed}/{len(nodes)} nodes")
+        else:
+            errors.append("Could not parse JSON from API output")
+
     except Exception as e:
         errors.append(f"Exception: {e}")
 
     wall_ms = int((time.time() - start_time) * 1000)
-    if stats["duration_ms"] == 0:
-        stats["duration_ms"] = wall_ms
+    stats["duration_ms"] = wall_ms
 
     success = len(errors) == 0
     return {

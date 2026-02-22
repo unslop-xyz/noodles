@@ -1,23 +1,28 @@
-"""Edge builder agent — describes edges from a single caller to all its callees."""
+"""Edge builder — describes edges from a single caller to all its callees.
+
+Uses the Anthropic API directly for minimal overhead.
+"""
 
 import json
 import re
 import time
-from collections.abc import AsyncIterator
 from pathlib import Path
 
-from claude_agent_sdk import (
-    AssistantMessage,
-    ClaudeAgentOptions,
-    ResultMessage,
-    TextBlock,
-    ToolUseBlock,
-    UserMessage,
-    query,
-)
+import anthropic
 
 AGENT_DIR = Path(__file__).parent
 AGENT_NAME = "edge_builder"
+MODEL = "claude-haiku-4-5-20251001"
+
+_client: anthropic.AsyncAnthropic | None = None
+
+
+def _get_client() -> anthropic.AsyncAnthropic:
+    """Lazily create a shared async client."""
+    global _client
+    if _client is None:
+        _client = anthropic.AsyncAnthropic()
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +34,7 @@ def _build_prompt(
     caller_source: str,
     callees: list[dict],
 ) -> str:
-    """Build the prompt for a batched edge builder agent.
+    """Build the prompt for a batched edge builder.
 
     Args:
         caller_id: The full node ID of the caller.
@@ -61,7 +66,7 @@ def _build_prompt(
 # ---------------------------------------------------------------------------
 
 def _extract_json_array(text: str) -> list[dict] | None:
-    """Extract a JSON array from agent text output."""
+    """Extract a JSON array from text output."""
     match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
     if match:
         try:
@@ -105,20 +110,11 @@ def _apply_results(
 
 
 # ---------------------------------------------------------------------------
-# Agent runner
+# API caller
 # ---------------------------------------------------------------------------
 
 def _load_md(filename: str) -> str:
     return (AGENT_DIR / filename).read_text()
-
-
-async def _as_stream(prompt_text: str) -> AsyncIterator[dict]:
-    yield {
-        "type": "user",
-        "session_id": "",
-        "message": {"role": "user", "content": prompt_text},
-        "parent_tool_use_id": None,
-    }
 
 
 async def run_edge_builder_for_caller(
@@ -127,7 +123,7 @@ async def run_edge_builder_for_caller(
     edges: list[dict],
     node_index: dict[str, dict],
 ) -> dict:
-    """Run the edge_builder agent for all edges from a single caller.
+    """Run the edge_builder for all edges from a single caller.
 
     Args:
         caller_id: The full node ID of the caller.
@@ -154,50 +150,44 @@ async def run_edge_builder_for_caller(
     system_prompt = _load_md("system_prompt.md")
     prompt = _build_prompt(caller_id, caller_source, callees)
 
-    options = ClaudeAgentOptions(
-        model="haiku",
-        system_prompt=system_prompt,
-        allowed_tools=[],
-        permission_mode="bypassPermissions",
-        max_turns=1,
-    )
-
-    log_lines: list[str] = []
-    all_text: list[str] = []
     start_time = time.time()
     errors: list[str] = []
-    stats = {"duration_ms": 0, "cost_usd": 0.0, "num_turns": 0}
+    log_lines: list[str] = []
+    stats = {"duration_ms": 0, "cost_usd": 0.0, "num_turns": 1}
 
     try:
-        async for message in query(prompt=_as_stream(prompt), options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        log_lines.append(block.text)
-                        all_text.append(block.text)
+        client = _get_client()
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": prompt}],
+        )
 
-            elif isinstance(message, ResultMessage):
-                stats["duration_ms"] = message.duration_ms or 0
-                stats["cost_usd"] = message.total_cost_usd or 0.0
-                stats["num_turns"] = message.num_turns or 0
+        full_text = "".join(
+            block.text for block in response.content if block.type == "text"
+        )
+        log_lines.append(full_text)
 
-                if message.is_error:
-                    errors.append(f"Agent error: {message.result}")
-                else:
-                    full_text = "\n".join(all_text)
-                    result_json = _extract_json_array(full_text)
-                    if result_json:
-                        completed, apply_errors = _apply_results(edges, result_json)
-                        errors.extend(apply_errors)
-                        log_lines.append(f"Applied {completed}/{len(edges)} edges")
-                    else:
-                        errors.append("Could not parse JSON from agent output")
+        # Compute cost from usage
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
+        # Haiku pricing: $0.80/M input, $4/M output
+        stats["cost_usd"] = (input_tokens * 0.80 + output_tokens * 4.0) / 1_000_000
+
+        result_json = _extract_json_array(full_text)
+        if result_json:
+            completed, apply_errors = _apply_results(edges, result_json)
+            errors.extend(apply_errors)
+            log_lines.append(f"Applied {completed}/{len(edges)} edges")
+        else:
+            errors.append("Could not parse JSON from API output")
+
     except Exception as e:
         errors.append(f"Exception: {e}")
 
     wall_ms = int((time.time() - start_time) * 1000)
-    if stats["duration_ms"] == 0:
-        stats["duration_ms"] = wall_ms
+    stats["duration_ms"] = wall_ms
 
     success = len(errors) == 0
     return {
