@@ -3,7 +3,20 @@
     "allow": [
       "Bash(pip install:*)",
       "Bash(pip3 install:*)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(ls:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(git -C /Users/allenzhang/Desktop/noodles log:*)",
+      "Bash(git -C /Users/allenzhang/Desktop/noodles diff HEAD src/viewer)",
+      "Bash(python:*)",
+      "Bash(python3 -c:*)",
+      "Bash(python3:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

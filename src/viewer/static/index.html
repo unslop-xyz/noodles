@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noodles Viewer</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #fff;
+    color: #333;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* --- Breadcrumb bar --- */
+  #breadcrumb-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+
+  #back-btn {
+    background: none;
+    border: 1px solid #ccc;
+    color: #555;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  #back-btn:hover { background: #e0e0e0; }
+  #back-btn:disabled { opacity: 0.3; cursor: default; }
+  #back-btn:disabled:hover { background: none; }
+
+  #breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    font-size: 14px;
+  }
+
+  .crumb {
+    color: #1a73e8;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .crumb:hover { background: #e8f0fe; }
+  .crumb.current {
+    color: #333;
+    cursor: default;
+    font-weight: 600;
+  }
+  .crumb.current:hover { background: none; }
+
+  .crumb-sep { color: #999; margin: 0 2px; }
+
+  /* --- Diagram area --- */
+  #diagram-area {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+  }
+  #diagram-area.panning { cursor: grabbing; }
+
+  #svg-container {
+    position: absolute;
+    transform-origin: 0 0;
+  }
+
+  /* Make clickable nodes stand out */
+  #svg-container .node.clickable { cursor: pointer; }
+  #svg-container .node.clickable:hover rect,
+  #svg-container .node.clickable:hover polygon,
+  #svg-container .node.clickable:hover .basic.label-container {
+    filter: brightness(1.15);
+    stroke-width: 2.5px;
+  }
+
+  /* --- Tooltip --- */
+  #tooltip {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px 16px;
+    max-width: 420px;
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    pointer-events: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  #tooltip .tt-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #222;
+    margin-bottom: 4px;
+  }
+  #tooltip .tt-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 400;
+  }
+  #tooltip .tt-badge.start_point { background: #d4edda; color: #155724; }
+  #tooltip .tt-badge.process { background: #d6e4f0; color: #1a4a7a; }
+  #tooltip .tt-badge.end_point { background: #f8d7da; color: #721c24; }
+  #tooltip .tt-desc { color: #555; margin-bottom: 6px; }
+  #tooltip .tt-file {
+    color: #888;
+    font-size: 12px;
+    font-family: monospace;
+    word-break: break-all;
+  }
+  #tooltip .tt-edge-label { font-weight: 600; color: #1a73e8; margin-bottom: 4px; }
+  #tooltip .tt-row { color: #666; font-size: 12px; }
+  #tooltip .tt-row span { color: #333; }
+
+  /* --- Loading --- */
+  #loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #999;
+  }
+</style>
+</head>
+<body>
+
+<div id="breadcrumb-bar">
+  <button id="back-btn" disabled>&larr; Back</button>
+  <div id="breadcrumb"></div>
+</div>
+
+<div id="diagram-area">
+  <div id="svg-container"></div>
+  <div id="loading">Loading diagrams...</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+(function() {
+  // ---- State ----
+  let DATA = null;       // data bundle from /api/data
+  let navStack = [];     // [{diagramName, title}]
+  let currentDiagram = null;
+
+  // Pan & zoom state
+  let zoom = 1;
+  let panX = 0, panY = 0;
+  let isPanning = false;
+  let panStartX = 0, panStartY = 0;
+  let panStartPanX = 0, panStartPanY = 0;
+
+  // Touch state
+  let lastTouchCenter = null;
+  let lastTouchDistance = null;
+
+  const MIN_ZOOM = 0.1;
+  const MAX_ZOOM = 5;
+
+  // DOM refs
+  const area = document.getElementById('diagram-area');
+  const container = document.getElementById('svg-container');
+  const tooltip = document.getElementById('tooltip');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const backBtn = document.getElementById('back-btn');
+  const loading = document.getElementById('loading');
+
+  // ---- Init ----
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'default',
+    flowchart: { curve: 'basis', useMaxWidth: false },
+    securityLevel: 'loose',
+  });
+
+  fetch('/api/data')
+    .then(r => r.json())
+    .then(data => {
+      DATA = data;
+      loading.style.display = 'none';
+      navigateTo('main', 'Main');
+    })
+    .catch(err => {
+      loading.textContent = 'Failed to load data: ' + err.message;
+    });
+
+  // ---- Rendering ----
+  let renderCounter = 0;
+
+  async function renderDiagram(name) {
+    currentDiagram = name;
+    const source = DATA.diagrams[name];
+    if (!source) {
+      container.innerHTML = '<p style="padding:40px;color:#f66">Diagram not found: ' + name + '</p>';
+      return;
+    }
+
+    renderCounter++;
+    const id = 'mermaid-' + renderCounter;
+
+    try {
+      const { svg } = await mermaid.render(id, source);
+      container.innerHTML = svg;
+      resetView();
+      attachInteractions();
+    } catch (err) {
+      container.innerHTML = '<p style="padding:40px;color:#f66">Render error: ' + err.message + '</p>';
+    }
+  }
+
+  function resetView() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+
+    // Reset transform first to measure natural SVG size
+    container.style.transform = 'none';
+
+    const svgEl = container.querySelector('svg');
+    if (svgEl) {
+      svgEl.style.maxWidth = 'none';
+      svgEl.style.height = 'auto';
+      const svgRect = svgEl.getBoundingClientRect();
+      const areaRect = area.getBoundingClientRect();
+      if (svgRect.width > 0 && svgRect.height > 0) {
+        const scaleX = areaRect.width / svgRect.width;
+        const scaleY = areaRect.height / svgRect.height;
+        zoom = Math.min(scaleX, scaleY, 1.5) * 0.9;
+
+        // Center the diagram in the viewport
+        const scaledW = svgRect.width * zoom;
+        const scaledH = svgRect.height * zoom;
+        panX = (areaRect.width - scaledW) / 2;
+        panY = (areaRect.height - scaledH) / 2;
+      }
+    }
+    applyTransform();
+  }
+
+  function applyTransform() {
+    container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  // ---- Interactions: hover + click ----
+  function attachInteractions() {
+    const svgEl = container.querySelector('svg');
+    if (!svgEl) return;
+
+    const nav = DATA.navigation[currentDiagram] || {};
+
+    // Process nodes
+    const nodeEls = svgEl.querySelectorAll('.node');
+    nodeEls.forEach(nodeEl => {
+      const mermaidId = extractNodeId(nodeEl);
+      if (!mermaidId) return;
+
+      const originalId = DATA.id_map[mermaidId];
+      const meta = originalId ? DATA.nodes[originalId] : null;
+
+      // Hover tooltip
+      nodeEl.addEventListener('mouseenter', (e) => showNodeTooltip(e, meta, mermaidId));
+      nodeEl.addEventListener('mousemove', (e) => positionTooltip(e));
+      nodeEl.addEventListener('mouseleave', () => hideTooltip());
+
+      // Click navigation for solid (has sub-diagram) nodes
+      if (nav[mermaidId]) {
+        nodeEl.classList.add('clickable');
+        nodeEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          hideTooltip();
+          const targetDiagram = nav[mermaidId];
+          const title = meta ? meta.name : targetDiagram;
+          navigateTo(targetDiagram, title);
+        });
+      }
+    });
+
+    // Process edge labels
+    const edgeLabelEls = svgEl.querySelectorAll('.edgeLabel');
+    edgeLabelEls.forEach(labelEl => {
+      labelEl.addEventListener('mouseenter', (e) => showEdgeTooltip(e, labelEl));
+      labelEl.addEventListener('mousemove', (e) => positionTooltip(e));
+      labelEl.addEventListener('mouseleave', () => hideTooltip());
+    });
+  }
+
+  function extractNodeId(nodeEl) {
+    const id = nodeEl.id || '';
+    // mermaid v11 format: "flowchart-{nodeId}-{index}"
+    const match = id.match(/^flowchart-(.+)-\d+$/);
+    if (match) return match[1];
+    // Fallback: try data-id attribute
+    if (nodeEl.dataset && nodeEl.dataset.id) return nodeEl.dataset.id;
+    return null;
+  }
+
+  // ---- Tooltips ----
+  function showNodeTooltip(e, meta, mermaidId) {
+    if (!meta) {
+      tooltip.innerHTML = `<div class="tt-name">${mermaidId}</div>`;
+    } else {
+      const badge = `<span class="tt-badge ${meta.type}">${meta.type.replace('_',' ')}</span>`;
+      tooltip.innerHTML = `
+        <div class="tt-name">${meta.name}${badge}</div>
+        ${meta.description ? `<div class="tt-desc">${meta.description}</div>` : ''}
+        ${meta.file_path ? `<div class="tt-file">${meta.file_path}::${meta.function}</div>` : ''}
+      `;
+    }
+    tooltip.style.display = 'block';
+    positionTooltip(e);
+  }
+
+  function showEdgeTooltip(e, labelEl) {
+    const labelText = (labelEl.textContent || '').trim().replace(/^"|"$/g, '');
+    // Find matching edge by label text
+    let edgeMeta = null;
+    for (const [key, meta] of Object.entries(DATA.edges)) {
+      if (meta.label === labelText) {
+        edgeMeta = meta;
+        break;
+      }
+    }
+
+    if (edgeMeta) {
+      let html = `<div class="tt-edge-label">${edgeMeta.label}</div>`;
+      if (edgeMeta.description) html += `<div class="tt-desc">${edgeMeta.description}</div>`;
+      const idx = edgeMeta.index != null ? edgeMeta.index : 'N/A';
+      html += `<div class="tt-row">Index: <span>${idx}</span></div>`;
+      const cond = edgeMeta.condition || 'None';
+      html += `<div class="tt-row">Condition: <span>${cond}</span></div>`;
+      tooltip.innerHTML = html;
+    } else {
+      tooltip.innerHTML = `<div class="tt-edge-label">${labelText}</div>`;
+    }
+    tooltip.style.display = 'block';
+    positionTooltip(e);
+  }
+
+  function positionTooltip(e) {
+    const pad = 12;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    // Keep tooltip within viewport
+    const rect = tooltip.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - pad;
+    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - pad;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  }
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+  }
+
+  // ---- Navigation ----
+  function navigateTo(diagramName, title) {
+    navStack.push({ name: diagramName, title: title || diagramName });
+    renderDiagram(diagramName);
+    updateBreadcrumb();
+  }
+
+  function navigateBack() {
+    if (navStack.length <= 1) return;
+    navStack.pop();
+    const current = navStack[navStack.length - 1];
+    renderDiagram(current.name);
+    updateBreadcrumb();
+  }
+
+  function navigateToIndex(index) {
+    if (index >= navStack.length - 1) return; // Already here
+    navStack = navStack.slice(0, index + 1);
+    const current = navStack[navStack.length - 1];
+    renderDiagram(current.name);
+    updateBreadcrumb();
+  }
+
+  function updateBreadcrumb() {
+    backBtn.disabled = navStack.length <= 1;
+
+    let html = '';
+    navStack.forEach((item, i) => {
+      if (i > 0) html += '<span class="crumb-sep">›</span>';
+      const isCurrent = i === navStack.length - 1;
+      html += `<span class="crumb ${isCurrent ? 'current' : ''}" data-index="${i}">${item.title}</span>`;
+    });
+    breadcrumb.innerHTML = html;
+
+    // Attach click handlers
+    breadcrumb.querySelectorAll('.crumb:not(.current)').forEach(el => {
+      el.addEventListener('click', () => {
+        navigateToIndex(parseInt(el.dataset.index));
+      });
+    });
+  }
+
+  backBtn.addEventListener('click', navigateBack);
+
+  // ---- Pan ----
+  area.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    // Don't start pan if clicking a node
+    if (e.target.closest('.node')) return;
+    isPanning = true;
+    area.classList.add('panning');
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panStartPanX = panX;
+    panStartPanY = panY;
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    panX = panStartPanX + (e.clientX - panStartX);
+    panY = panStartPanY + (e.clientY - panStartY);
+    applyTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    isPanning = false;
+    area.classList.remove('panning');
+  });
+
+  // ---- Zoom (wheel) ----
+  area.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = area.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const factor = Math.pow(1.1, -e.deltaY / 50);
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+
+    // Zoom toward mouse position
+    panX = mouseX - (mouseX - panX) * (newZoom / zoom);
+    panY = mouseY - (mouseY - panY) * (newZoom / zoom);
+    zoom = newZoom;
+
+    applyTransform();
+  }, { passive: false });
+
+  // ---- Touch: pinch zoom + pan ----
+  area.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      lastTouchCenter = getTouchCenter(e.touches);
+      lastTouchDistance = getTouchDistance(e.touches);
+    }
+  }, { passive: false });
+
+  area.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 2 || !lastTouchDistance) return;
+    e.preventDefault();
+
+    const center = getTouchCenter(e.touches);
+    const distance = getTouchDistance(e.touches);
+    const rect = area.getBoundingClientRect();
+
+    // Pinch zoom
+    const factor = distance / lastTouchDistance;
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+    const anchorX = center.x - rect.left;
+    const anchorY = center.y - rect.top;
+    panX = anchorX - (anchorX - panX) * (newZoom / zoom);
+    panY = anchorY - (anchorY - panY) * (newZoom / zoom);
+    zoom = newZoom;
+
+    // Pan
+    if (lastTouchCenter) {
+      panX += center.x - lastTouchCenter.x;
+      panY += center.y - lastTouchCenter.y;
+    }
+
+    lastTouchCenter = center;
+    lastTouchDistance = distance;
+    applyTransform();
+  }, { passive: false });
+
+  area.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      lastTouchCenter = null;
+      lastTouchDistance = null;
+    }
+  });
+
+  function getTouchCenter(touches) {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  }
+  function getTouchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  // ---- Keyboard ----
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      navigateBack();
+    }
+  });
+})();
+</script>
+</body>
+</html>

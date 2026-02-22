@@ -11,14 +11,24 @@ from collections import defaultdict
 MAX_NODES_PER_DIAGRAM = 20
 
 SHAPE_BY_TYPE = {
-    "start_point": '("{}")'    ,  # rounded rectangle
-    "end_point":   '(["{}"])'  ,  # stadium
-    "process":     '["{}"]'    ,  # rectangle
+    "start_point": '{{{{"{}"}}}}'  ,  # hexagon
+    "end_point":   '(["{}"])'     ,  # stadium
+    "process":     '["{}"]'       ,  # rectangle
+}
+
+STYLE_PREFIX_BY_TYPE = {
+    "start_point": "start",
+    "end_point":   "end",
+    "process":     "process",
 }
 
 STYLE_DEFS = (
-    '    classDef solid fill:#e0e0e0,stroke:#333,color:#000\n'
-    '    classDef transparent fill:none,stroke:#333,color:#000'
+    '    classDef startSolid fill:#e8f5e9,stroke:#81c784,color:#2e7d32\n'
+    '    classDef startTransparent fill:none,stroke:#81c784,color:#2e7d32\n'
+    '    classDef processSolid fill:#e3f2fd,stroke:#64b5f6,color:#1565c0\n'
+    '    classDef processTransparent fill:none,stroke:#64b5f6,color:#1565c0\n'
+    '    classDef endSolid fill:#fce4ec,stroke:#e57373,color:#c62828\n'
+    '    classDef endTransparent fill:none,stroke:#e57373,color:#c62828'
 )
 
 
@@ -267,7 +277,9 @@ def _mermaid_node(node: dict, has_sub: bool = False) -> str:
     mid = _sanitize_id(node["id"])
     label = _sanitize_text(node.get("name") or node["id"].split("::")[-1])
     shape = SHAPE_BY_TYPE.get(node.get("type", "process"), '["{}"]')
-    style = ":::solid" if has_sub else ":::transparent"
+    prefix = STYLE_PREFIX_BY_TYPE.get(node.get("type", "process"), "process")
+    suffix = "Solid" if has_sub else "Transparent"
+    style = f":::{prefix}{suffix}"
     return f"{mid}{shape.format(label)}{style}"
 
 
