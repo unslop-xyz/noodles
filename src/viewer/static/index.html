@@ -125,6 +125,8 @@
   #tooltip .tt-badge.start_point { background: #e0f2f1; color: #00695c; }
   #tooltip .tt-badge.process { background: #d6e4f0; color: #1a4a7a; }
   #tooltip .tt-badge.end_point { background: #f8d7da; color: #721c24; }
+  #tooltip .tt-badge.updated { background: #fff9c4; color: #f57f17; }
+  #tooltip .tt-badge.new { background: #c8e6c9; color: #2e7d32; }
   #tooltip .tt-desc { color: #555; margin-bottom: 6px; }
   #tooltip .tt-file {
     color: #888;
@@ -389,8 +391,9 @@
       tooltip.innerHTML = `<div class="tt-name">${mermaidId}</div>`;
     } else {
       const badge = `<span class="tt-badge ${meta.type}">${meta.type.replace('_',' ')}</span>`;
+      const tagHtml = meta.tag ? `<span class="tt-badge ${meta.tag}">${meta.tag}</span>` : '';
       tooltip.innerHTML = `
-        <div class="tt-name">${meta.name}${badge}</div>
+        <div class="tt-name">${meta.name}${badge}${tagHtml}</div>
         ${meta.description ? `<div class="tt-desc">${meta.description}</div>` : ''}
         ${meta.file_path ? `<div class="tt-file">${meta.file_path}::${meta.function}</div>` : ''}
       `;
