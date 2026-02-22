@@ -19,17 +19,16 @@ SHAPE_BY_TYPE = {
 
 STYLE_PREFIX_BY_TYPE = {
     "start_point": "start",
-    "end_point":   "end",
+    "end_point":   "endpoint",
     "process":     "process",
 }
 
 STYLE_DEFS = (
-    '    classDef startSolid fill:#e8f5e9,stroke:#81c784,color:#2e7d32\n'
-    '    classDef startTransparent fill:none,stroke:#81c784,color:#2e7d32\n'
-    '    classDef processSolid fill:#e3f2fd,stroke:#64b5f6,color:#1565c0\n'
-    '    classDef processTransparent fill:none,stroke:#64b5f6,color:#1565c0\n'
-    '    classDef endSolid fill:#fce4ec,stroke:#e57373,color:#c62828\n'
-    '    classDef endTransparent fill:none,stroke:#e57373,color:#c62828'
+    '    classDef start fill:none,stroke:#4db6ac,color:#00695c\n'
+    '    classDef process fill:none,stroke:#64b5f6,color:#1565c0\n'
+    '    classDef endpoint fill:none,stroke:#e57373,color:#c62828\n'
+    '    classDef updated fill:#fff9c4,stroke:#f9a825,color:#f57f17\n'
+    '    classDef new fill:#c8e6c9,stroke:#66bb6a,color:#2e7d32'
 )
 
 
@@ -119,6 +118,8 @@ def _render_flat(
         node = node_index.get(nid)
         if node:
             lines.append(f"    {_mermaid_node(node, has_sub=nid in roots)}")
+    for nid in sorted(node_ids & roots):
+        lines.append(f"    style {_sanitize_id(nid)} stroke-width:6px")
     emitted: set[tuple[str, str]] = set()
     for nid in sorted(node_ids):
         for e in edge_index.get(nid, []):
@@ -317,11 +318,17 @@ def _mermaid_node(node: dict, has_sub: bool = False) -> str:
     """Format a single node as a mermaid node definition line."""
     mid = _sanitize_id(node["id"])
     label = _sanitize_text(node.get("name") or node["id"].split("::")[-1])
+    if has_sub:
+        label += " [+]"
     shape = SHAPE_BY_TYPE.get(node.get("type", "process"), '["{}"]')
-    prefix = STYLE_PREFIX_BY_TYPE.get(node.get("type", "process"), "process")
-    suffix = "Solid" if has_sub else "Transparent"
-    style = f":::{prefix}{suffix}"
-    return f"{mid}{shape.format(label)}{style}"
+    status = node.get("status")
+    if status == "updated":
+        cls = "updated"
+    elif status == "new":
+        cls = "new"
+    else:
+        cls = STYLE_PREFIX_BY_TYPE.get(node.get("type", "process"), "process")
+    return f"{mid}{shape.format(label)}:::{cls}"
 
 
 def _mermaid_edge(from_id: str, to_id: str, edge: dict | None) -> str:
