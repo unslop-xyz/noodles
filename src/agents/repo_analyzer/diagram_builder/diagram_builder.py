@@ -9,6 +9,7 @@ from collections import defaultdict
 # ---------------------------------------------------------------------------
 
 MAX_NODES_PER_DIAGRAM = 20
+BRANCH_SIZE_THRESHOLD = 10
 
 SHAPE_BY_TYPE = {
     "start_point": '{{{{"{}"}}}}'  ,  # hexagon
@@ -75,8 +76,10 @@ def build_diagrams(
         main = _render_flat(reachable, edge_index, node_index)
         return {"main": main, "sub_diagrams": {}}
 
-    # Step 2: Split
-    main, sub_diagrams = _split_diagram(start_points, edge_index, node_index, reachable)
+    # Step 2: Branch-size-based splitting
+    main, sub_diagrams = _build_diagrams_branch_based(
+        start_points, edge_index, node_index, reachable,
+    )
     return {"main": main, "sub_diagrams": sub_diagrams}
 
 
@@ -127,121 +130,159 @@ def _render_flat(
     return "\n".join(lines) + "\n"
 
 
-def _split_diagram(
+def _compute_branch_sizes(
+    reachable: set[str],
+    edge_index: dict[str, list[dict]],
+    threshold: int,
+) -> tuple[dict[str, int], set[str]]:
+    """Compute branch sizes bottom-up and identify sub-diagram roots.
+
+    A node becomes a sub-diagram root when its total branch size
+    (self + all unique descendants) exceeds *threshold*.
+
+    Children are traversed in edge ``index`` order (call sequence from
+    tree-sitter) so the DFS respects source-code execution order.
+    Cycles are handled via WHITE/GRAY/BLACK coloring — a back-edge
+    contributes 1 (the node itself, no further expansion).
+
+    Returns:
+        branch_size: node_id → total branch size (before collapsing)
+        sub_roots:   set of node_ids that became sub-diagram roots
+    """
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[str, int] = {nid: WHITE for nid in reachable}
+    branch_size: dict[str, int] = {}
+    sub_roots: set[str] = set()
+
+    def dfs(nid: str) -> int:
+        """Return effective size visible to parent (1 if collapsed)."""
+        if nid not in reachable:
+            return 0
+        if color[nid] == BLACK:
+            return 1 if nid in sub_roots else branch_size[nid]
+        if color[nid] == GRAY:
+            return 1  # cycle — just the node, no expansion
+
+        color[nid] = GRAY
+
+        # Traverse children in index order
+        edges = sorted(
+            (e for e in edge_index.get(nid, []) if e["to"] in reachable),
+            key=lambda e: e.get("index", 0),
+        )
+
+        seen: set[str] = set()
+        total = 1  # count self
+        for e in edges:
+            child = e["to"]
+            if child not in seen:
+                seen.add(child)
+                total += dfs(child)
+
+        branch_size[nid] = total
+        color[nid] = BLACK
+
+        if total > threshold:
+            sub_roots.add(nid)
+            return 1  # collapsed for parent
+        return total
+
+    for nid in reachable:
+        if color[nid] == WHITE:
+            dfs(nid)
+
+    return branch_size, sub_roots
+
+
+def _collect_main_diagram_nodes(
+    entry_ids: list[str],
+    edge_index: dict[str, list[dict]],
+    reachable: set[str],
+    sub_roots: set[str],
+) -> set[str]:
+    """Collect nodes for the main (top-level) diagram.
+
+    BFS from entry points. Sub-roots are included but never expanded
+    — their details live in the sub-diagram.
+    """
+    nodes: set[str] = set()
+    stack = list(entry_ids)
+    while stack:
+        nid = stack.pop()
+        if nid in nodes or nid not in reachable:
+            continue
+        nodes.add(nid)
+        if nid in sub_roots:
+            continue  # include but don't expand
+        for e in edge_index.get(nid, []):
+            if e["to"] in reachable:
+                stack.append(e["to"])
+    return nodes
+
+
+def _collect_sub_diagram_nodes(
+    root: str,
+    edge_index: dict[str, list[dict]],
+    reachable: set[str],
+    sub_roots: set[str],
+) -> set[str]:
+    """Collect nodes for a sub-diagram rooted at *root*.
+
+    Includes root + all descendants, stopping at (but including)
+    nested sub-roots.
+    """
+    nodes: set[str] = set()
+    stack = [root]
+    while stack:
+        nid = stack.pop()
+        if nid in nodes or nid not in reachable:
+            continue
+        nodes.add(nid)
+        if nid != root and nid in sub_roots:
+            continue  # include but don't expand
+        for e in edge_index.get(nid, []):
+            if e["to"] in reachable:
+                stack.append(e["to"])
+    return nodes
+
+
+def _build_diagrams_branch_based(
     entry_ids: list[str],
     edge_index: dict[str, list[dict]],
     node_index: dict[str, dict],
     reachable: set[str],
-    inline_ids: set[str] | None = None,
+    threshold: int = BRANCH_SIZE_THRESHOLD,
 ) -> tuple[str, dict[str, str]]:
-    """Split a diagram with > MAX_NODES nodes into main + sub-diagrams.
+    """Build main + sub-diagrams using branch-size-based splitting.
 
-    Rules:
-      - Non-returned edges stay in the main diagram.
-      - Returned edges open a sub-diagram rooted at the caller node,
-        containing all downstream content.
-      - Each sub-diagram is recursively split if it exceeds the threshold.
-
-    Args:
-        inline_ids: Nodes whose edges are always shown directly (no splitting).
-                    Used to prevent infinite recursion when a sub-diagram root
-                    is re-entered in a recursive split.
+    1. Compute branch sizes from leaves upward.
+    2. Mark nodes exceeding *threshold* as sub-diagram roots.
+    3. Render main diagram (sub-roots collapsed).
+    4. Render each sub-diagram (nested sub-roots collapsed).
     """
-    inline = inline_ids or set()
-    main_nodes: set[str] = set()
-    main_edges: list[dict] = []
+    # Phase 1: bottom-up branch sizing
+    _sizes, sub_roots = _compute_branch_sizes(reachable, edge_index, threshold)
+
+    # Phase 2: main diagram
+    main_nodes = _collect_main_diagram_nodes(
+        entry_ids, edge_index, reachable, sub_roots,
+    )
+    main = _render_flat(
+        main_nodes, edge_index, node_index, sub_roots=sub_roots & main_nodes,
+    )
+
+    # Phase 3: sub-diagrams
     sub_diagrams: dict[str, str] = {}
-    sub_roots: set[str] = set()
-    visited: set[str] = set()
+    for root_id in sorted(sub_roots):
+        sub_nodes = _collect_sub_diagram_nodes(
+            root_id, edge_index, reachable, sub_roots,
+        )
+        name = _unique_sub_name(root_id, node_index, sub_diagrams)
+        nested = (sub_roots & sub_nodes) - {root_id}
+        sub_diagrams[name] = _render_flat(
+            sub_nodes, edge_index, node_index, sub_roots=nested,
+        )
 
-    def visit(nid: str) -> None:
-        if nid in visited or nid not in reachable:
-            return
-        visited.add(nid)
-        main_nodes.add(nid)
-
-        outgoing = [e for e in edge_index.get(nid, []) if e["to"] in reachable]
-
-        # Inline nodes: show all edges directly (prevent infinite recursion)
-        if nid in inline:
-            for e in outgoing:
-                main_edges.append(e)
-                visit(e["to"])
-            return
-
-        non_ret = [e for e in outgoing if not e.get("is_returned")]
-        ret = [e for e in outgoing if e.get("is_returned")]
-
-        # Non-returned edges go in main
-        for e in non_ret:
-            main_edges.append(e)
-            visit(e["to"])
-
-        if not ret:
-            return
-
-        # Returned edges open a sub-diagram
-        # Collect all downstream nodes from returned targets
-        # (ignore visited — nodes may appear in multiple diagrams)
-        sub_scope: set[str] = {nid}
-        stack = [e["to"] for e in ret]
-        while stack:
-            sid = stack.pop()
-            if sid in sub_scope or sid not in reachable:
-                continue
-            sub_scope.add(sid)
-            for se in edge_index.get(sid, []):
-                if se["to"] in reachable:
-                    stack.append(se["to"])
-
-        if len(sub_scope) <= 1:
-            # All returned targets already visited — just draw edges in main
-            for e in ret:
-                main_edges.append(e)
-            return
-
-        # Mark sub-scope nodes as visited in main (except root)
-        visited.update(sub_scope - {nid})
-
-        # Build sub-diagram (recursively split if > threshold)
-        sub_roots.add(nid)
-        name = _unique_sub_name(nid, node_index, sub_diagrams)
-        if len(sub_scope) <= MAX_NODES_PER_DIAGRAM:
-            sub_diagrams[name] = _render_flat(sub_scope, edge_index, node_index)
-        else:
-            sub_main, nested = _split_diagram(
-                [nid], edge_index, node_index, sub_scope, inline_ids={nid},
-            )
-            sub_diagrams[name] = sub_main
-            sub_diagrams.update(nested)
-
-    for eid in entry_ids:
-        visit(eid)
-
-    # Render main diagram
-    lines = ["graph LR", STYLE_DEFS]
-    emitted_nodes: set[str] = set()
-    for nid in sorted(main_nodes):
-        node = node_index.get(nid)
-        if node:
-            emitted_nodes.add(nid)
-            lines.append(f"    {_mermaid_node(node, has_sub=nid in sub_roots)}")
-
-    emitted_edges: set[tuple[str, str]] = set()
-    for e in main_edges:
-        # Ensure target node is emitted
-        target = e["to"]
-        if target not in emitted_nodes:
-            node = node_index.get(target)
-            if node:
-                emitted_nodes.add(target)
-                lines.append(f"    {_mermaid_node(node, has_sub=target in sub_roots)}")
-        key = (e["from"], e["to"])
-        if key not in emitted_edges:
-            emitted_edges.add(key)
-            lines.append(f"    {_mermaid_edge(e['from'], e['to'], e)}")
-
-    main = "\n".join(lines) + "\n"
     return main, sub_diagrams
 
 
