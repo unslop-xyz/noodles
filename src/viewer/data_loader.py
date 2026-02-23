@@ -81,7 +81,13 @@ def load_result(result_dir: str | Path) -> dict:
     available_diagrams = set(diagrams.keys())
     mermaid_id_to_sub: dict[str, str] = {}
     for node in call_graph["nodes"]:
+        # Extract function name from node ID (e.g., "src/foo.py::my_func" -> "my_func")
+        # or use the explicit name field if present
         name = node.get("name", "")
+        if not name:
+            node_id = node.get("id", "")
+            if "::" in node_id:
+                name = node_id.split("::")[-1]
         if not name:
             continue
         sanitized_name = _sanitize_id(name)
