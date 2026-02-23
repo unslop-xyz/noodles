@@ -134,6 +134,14 @@
     font-family: monospace;
     word-break: break-all;
   }
+  #tooltip .tt-update {
+    color: #f57f17;
+    font-style: italic;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+  }
   #tooltip .tt-edge-label { font-weight: 600; color: #1a73e8; margin-bottom: 4px; }
   #tooltip .tt-row { color: #666; font-size: 12px; }
   #tooltip .tt-row span { color: #333; }
@@ -392,10 +400,14 @@
     } else {
       const badge = `<span class="tt-badge ${meta.type}">${meta.type.replace('_',' ')}</span>`;
       const tagHtml = meta.tag ? `<span class="tt-badge ${meta.tag}">${meta.tag}</span>` : '';
+      const updateHtml = (meta.status === 'updated' && meta.update)
+        ? `<div class="tt-update">${meta.update}</div>`
+        : '';
       tooltip.innerHTML = `
         <div class="tt-name">${meta.name}${badge}${tagHtml}</div>
         ${meta.description ? `<div class="tt-desc">${meta.description}</div>` : ''}
         ${meta.file_path ? `<div class="tt-file">${meta.file_path}::${meta.function}</div>` : ''}
+        ${updateHtml}
       `;
     }
     tooltip.style.display = 'block';

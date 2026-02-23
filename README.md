@@ -20,8 +20,11 @@ Noodles creates interactive diagrams that visualize how your code actually works
 
 ```bash
 uv sync
-export ANTHROPIC_API_KEY=<your-key> # Optional to enable AI-powered enrichment of node descriptions and edge labels.
+cp .env.example .env
+# Edit .env and add your Anthropic API key
 ```
+
+The `ANTHROPIC_API_KEY` enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
 
 ## Usage
 
@@ -58,12 +61,14 @@ The call graph builder uses tree-sitter for AST parsing. Currently supported:
 |-----------|------------|
 | `.py`     | Python     |
 | `.js`     | JavaScript |
+| `.jsx`    | JavaScript |
 | `.ts`     | TypeScript |
 | `.tsx`    | TSX        |
 
+React/Next.js JSX component usage (`<MyComponent />`) is detected as function calls, so component hierarchies appear correctly in the call graph.
+
 ### Not yet supported
 
-- **JSX (`.jsx`)** - Can be added by mapping to the JavaScript parser
 - **Other languages** - Requires adding tree-sitter grammar and function detection logic
 
 ## Limitations
@@ -73,18 +78,11 @@ The call graph builder uses tree-sitter for AST parsing. Currently supported:
 The call graph is built by detecting function calls in the AST. This works well for:
 - Direct function calls: `foo()`, `obj.method()`
 - Imported function calls
+- JSX component usage: `<MyComponent />`, `<UI.Card />`
 
 This does **not** detect:
-- **JSX component usage** - `<MyComponent />` is not recognized as a call to `MyComponent`
 - **Dynamic calls** - `getattr(obj, 'method')()`, `obj[key]()`
 - **Callbacks passed to frameworks** - e.g., route handlers registered via decorators
-
-### React/Frontend codebases
-
-React components communicate via JSX rendering (`<Child />`) rather than direct function calls. The current AST parser doesn't recognize JSX elements as function invocations, so:
-- Component hierarchies won't show edges between parent and child components
-- Components may appear as disconnected "orphan" nodes
-- The PR analyzer may show changed components without meaningful connections
 
 ### PR analyzer
 
@@ -94,4 +92,4 @@ The PR analyzer prunes the call graph to functions affected by a PR. This works 
 
 It produces limited results when:
 - Changes are to isolated/standalone functions
-- The codebase uses patterns not detected by AST analysis (decorators, dynamic dispatch, JSX)
+- The codebase uses patterns not detected by AST analysis (decorators, dynamic dispatch)

@@ -24,6 +24,7 @@ SKIP_DIRS = {
 EXTENSION_TO_LANG = {
     ".py": "python",
     ".js": "javascript",
+    ".jsx": "javascript",
     ".ts": "typescript",
     ".tsx": "tsx",
 }
@@ -321,6 +322,14 @@ def _collect_calls(node: Node, calls: list, lang: str) -> None:
             row = node.start_point[0]
             calls.append((name, is_returned, row))
 
+    # Detect JSX component usage as calls (React/Next.js)
+    if lang in ("javascript", "typescript", "tsx"):
+        if node.type in ("jsx_self_closing_element", "jsx_opening_element"):
+            component_name = _extract_jsx_component_name(node)
+            if component_name and _is_custom_component(component_name):
+                row = node.start_point[0]
+                calls.append((component_name, True, row))
+
     for child in node.children:
         _collect_calls(child, calls, lang)
 
@@ -347,3 +356,35 @@ def _extract_callee_name(call_node: Node, lang: str) -> str | None:
         return prop.text.decode("utf-8") if prop else None
 
     return None
+
+
+def _extract_jsx_component_name(jsx_node: Node) -> str | None:
+    """Extract the component name from a JSX element node.
+
+    Handles:
+    - <MyComponent /> -> "MyComponent"
+    - <components.MyComponent /> -> "MyComponent"
+    """
+    name_node = jsx_node.child_by_field_name("name")
+    if name_node is None:
+        return None
+
+    # Simple identifier: <MyComponent />
+    if name_node.type == "identifier":
+        return name_node.text.decode("utf-8")
+
+    # Member expression: <components.MyComponent />
+    if name_node.type == "member_expression":
+        prop = name_node.child_by_field_name("property")
+        return prop.text.decode("utf-8") if prop else None
+
+    return None
+
+
+def _is_custom_component(name: str) -> bool:
+    """Check if a JSX element is a custom component vs HTML element.
+
+    React convention: custom components use PascalCase (start with uppercase).
+    HTML elements are lowercase (div, span, button, etc.).
+    """
+    return name[0].isupper() if name else False

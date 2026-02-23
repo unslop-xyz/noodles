@@ -60,12 +60,33 @@ def build_diagrams(
 
     node_index = {n["id"]: n for n in nodes}
     edge_index: dict[str, list[dict]] = defaultdict(list)
+    reverse_edge_index: dict[str, list[dict]] = defaultdict(list)
     for e in edges:
         edge_index[e["from"]].append(e)
+        reverse_edge_index[e["to"]].append(e)
 
-    # Collect all reachable nodes from start points
     all_node_ids = set(node_index.keys())
-    reachable = _collect_reachable(start_points, edge_index, all_node_ids)
+
+    # Check if this is a PR analysis (has changed nodes)
+    changed_ids = [
+        n["id"] for n in nodes
+        if n.get("status") in ("new", "updated")
+    ]
+
+    if changed_ids:
+        # PR analysis: center diagram on changed nodes, show context bidirectionally
+        reachable = _collect_bidirectional(
+            changed_ids, edge_index, reverse_edge_index, all_node_ids
+        )
+        # Find roots of the reachable subgraph (nodes with no incoming edges
+        # from other reachable nodes) to ensure connecting paths are shown
+        entry_ids = _find_subgraph_roots(reachable, reverse_edge_index)
+    elif start_points:
+        # Repo analysis: traverse from start points
+        reachable = _collect_reachable(start_points, edge_index, all_node_ids)
+        entry_ids = start_points
+    else:
+        return {"main": "graph LR\n", "sub_diagrams": {}}
 
     if not reachable:
         return {"main": "graph LR\n", "sub_diagrams": {}}
@@ -77,7 +98,7 @@ def build_diagrams(
 
     # Step 2: Branch-size-based splitting
     main, sub_diagrams = _build_diagrams_branch_based(
-        start_points, edge_index, node_index, reachable,
+        entry_ids, edge_index, node_index, reachable,
     )
     return {"main": main, "sub_diagrams": sub_diagrams}
 
@@ -102,6 +123,66 @@ def _collect_reachable(
         for e in edge_index.get(nid, []):
             if e["to"] in scope:
                 stack.append(e["to"])
+    return reachable
+
+
+def _find_subgraph_roots(
+    subgraph: set[str],
+    reverse_edge_index: dict[str, list[dict]],
+) -> list[str]:
+    """Find root nodes of a subgraph (nodes with no incoming edges from within).
+
+    These are the natural entry points for rendering the subgraph top-down.
+    """
+    roots = []
+    for nid in subgraph:
+        has_internal_caller = False
+        for e in reverse_edge_index.get(nid, []):
+            if e["from"] in subgraph:
+                has_internal_caller = True
+                break
+        if not has_internal_caller:
+            roots.append(nid)
+    return sorted(roots)
+
+
+def _collect_bidirectional(
+    center_ids: list[str],
+    edge_index: dict[str, list[dict]],
+    reverse_edge_index: dict[str, list[dict]],
+    scope: set[str],
+) -> set[str]:
+    """Collect nodes reachable in both directions from center_ids.
+
+    - Downstream: follow edge_index (caller -> callees)
+    - Upstream: follow reverse_edge_index (callee -> callers)
+    """
+    reachable: set[str] = set()
+    stack = list(center_ids)
+
+    # Collect downstream (callees)
+    while stack:
+        nid = stack.pop()
+        if nid in reachable or nid not in scope:
+            continue
+        reachable.add(nid)
+        for e in edge_index.get(nid, []):
+            if e["to"] in scope:
+                stack.append(e["to"])
+
+    # Collect upstream (callers) - start fresh from center
+    visited_up: set[str] = set()
+    stack = list(center_ids)
+    while stack:
+        nid = stack.pop()
+        if nid in visited_up or nid not in scope:
+            continue
+        visited_up.add(nid)
+        reachable.add(nid)
+        for e in reverse_edge_index.get(nid, []):
+            if e["from"] in scope:
+                stack.append(e["from"])
+
     return reachable
 
 
