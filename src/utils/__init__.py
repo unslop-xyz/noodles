@@ -1,5 +1,5 @@
 """Shared utilities for the noodles package."""
 
-from .sanitize import sanitize_id
+from .sanitize import _sanitize_id
 
-__all__ = ["sanitize_id"]
+__all__ = ["_sanitize_id"]

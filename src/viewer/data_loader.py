@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from utils import sanitize_id
+from utils import _sanitize_id
 
 
 def load_result(result_dir: str | Path) -> dict:
@@ -34,7 +34,7 @@ def load_result(result_dir: str | Path) -> dict:
     # Build id_map: sanitized_mermaid_id -> original_node_id
     id_map: dict[str, str] = {}
     for node in call_graph["nodes"]:
-        sanitized = sanitize_id(node["id"])
+        sanitized = _sanitize_id(node["id"])
         id_map[sanitized] = node["id"]
 
     # Build nodes metadata lookup: original_id -> metadata
@@ -60,7 +60,7 @@ def load_result(result_dir: str | Path) -> dict:
     # Build edges metadata lookup: "sanitized_from -> sanitized_to" -> metadata
     edges: dict[str, dict] = {}
     for edge in call_graph["edges"]:
-        key = f"{sanitize_id(edge['from'])} -> {sanitize_id(edge['to'])}"
+        key = f"{_sanitize_id(edge['from'])} -> {_sanitize_id(edge['to'])}"
         edges[key] = {
             "label": edge.get("label", ""),
             "description": edge.get("description", ""),
@@ -84,8 +84,8 @@ def load_result(result_dir: str | Path) -> dict:
                 name = node_id.split("::")[-1]
         if not name:
             continue
-        sanitized_name = sanitize_id(name)
-        mermaid_id = sanitize_id(node["id"])
+        sanitized_name = _sanitize_id(name)
+        mermaid_id = _sanitize_id(node["id"])
         if sanitized_name in available_diagrams:
             mermaid_id_to_sub[mermaid_id] = sanitized_name
         else:

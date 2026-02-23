@@ -3,7 +3,7 @@
 import re
 
 
-def sanitize_id(node_id: str) -> str:
+def _sanitize_id(node_id: str) -> str:
     """Convert a call graph node ID to a valid mermaid identifier.
 
     Replaces non-alphanumeric characters (except underscores) with underscores,
