@@ -5,19 +5,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# Ensure sibling directories under agents/ are importable.
-AGENTS_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(AGENTS_DIR))
+from agents.node_builder import run_node_builder_for_file
+from agents.edge_builder import run_edge_builder_for_caller
+from agents.pr_analyzer.full_graph_builder.changes_builder import run_changes_builder_for_file
 
-# changes_builder lives under this directory (full_graph_builder/changes_builder/).
-FULL_GRAPH_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(FULL_GRAPH_DIR))
-
-from node_builder.node_builder import run_node_builder_for_file
-from edge_builder.edge_builder import run_edge_builder_for_caller
-from changes_builder.changes_builder import run_changes_builder_for_file
-
-MAX_CONCURRENT_AGENTS = 20
+MAX_CONCURRENT_AGENTS = 12
 
 
 def _print_progress(label: str, done: int, total: int) -> None:
@@ -223,3 +215,13 @@ def _write_consolidated_log(
     ]
 
     log_path.write_text("\n".join(summary + lines))
+
+    # Print first error to stderr for visibility
+    if total_errors > 0:
+        for r in results:
+            if isinstance(r, BaseException):
+                print(f"  Error: {r}", file=sys.stderr)
+                break
+            if r.get("errors"):
+                print(f"  Error: {r['errors'][0]}", file=sys.stderr)
+                break

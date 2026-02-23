@@ -21,10 +21,12 @@ Noodles creates interactive diagrams that visualize how your code actually works
 ```bash
 uv sync
 cp .env.example .env
-# Edit .env and add your Anthropic API key
+# Edit .env and add your API key
 ```
 
-The `ANTHROPIC_API_KEY` enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
+Supported LLM providers: `anthropic` (default), `openai`, `gemini`, `groq`, `huggingface`. Set `LLM_PROVIDER` in your `.env` file to switch providers. See `.env.example` for configuration options.
+
+An API key enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
 
 ## Usage
 

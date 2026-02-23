@@ -4,15 +4,7 @@ import json
 import re
 from pathlib import Path
 
-
-def _sanitize_id(node_id: str) -> str:
-    """Convert a call graph node ID to a valid mermaid identifier.
-
-    Mirrors diagram_builder._sanitize_id exactly.
-    """
-    s = re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s or "node"
+from utils import _sanitize_id
 
 
 def load_result(result_dir: str | Path) -> dict:

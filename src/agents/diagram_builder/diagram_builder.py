@@ -3,6 +3,8 @@
 import re
 from collections import defaultdict
 
+from utils import _sanitize_id
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -434,13 +436,6 @@ def _mermaid_edge(from_id: str, to_id: str, edge: dict | None) -> str:
 # ---------------------------------------------------------------------------
 # Sanitization
 # ---------------------------------------------------------------------------
-
-def _sanitize_id(node_id: str) -> str:
-    """Convert a call graph node ID to a valid mermaid identifier."""
-    s = re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s or "node"
-
 
 def _sanitize_text(text: str) -> str:
     """Sanitize text for use inside mermaid labels."""

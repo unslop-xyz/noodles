@@ -2,7 +2,6 @@
 
 One API call per source file, processing all updated functions in that file at once.
 Source code is embedded in the prompt (no Read tool needed).
-Uses the Anthropic API directly for minimal overhead.
 """
 
 import json
@@ -10,21 +9,20 @@ import re
 import time
 from pathlib import Path
 
-import anthropic
+from llm import get_provider
 
 AGENT_DIR = Path(__file__).parent
 AGENT_NAME = "changes_builder"
-MODEL = "claude-haiku-4-5-20251001"
 
-_client: anthropic.AsyncAnthropic | None = None
+_provider = None
 
 
-def _get_client() -> anthropic.AsyncAnthropic:
-    """Lazily create a shared async client."""
-    global _client
-    if _client is None:
-        _client = anthropic.AsyncAnthropic()
-    return _client
+def _get_provider():
+    """Lazily create a shared LLM provider."""
+    global _provider
+    if _provider is None:
+        _provider = get_provider()
+    return _provider
 
 
 # ---------------------------------------------------------------------------
@@ -115,26 +113,17 @@ async def run_changes_builder_for_file(
     stats = {"duration_ms": 0, "cost_usd": 0.0, "num_turns": 1}
 
     try:
-        client = _get_client()
-        response = await client.messages.create(
-            model=MODEL,
+        provider = _get_provider()
+        response = await provider.complete(
+            system_prompt=system_prompt,
+            user_prompt=prompt,
             max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": prompt}],
         )
 
-        full_text = "".join(
-            block.text for block in response.content if block.type == "text"
-        )
-        log_lines.append(full_text)
+        log_lines.append(response.text)
+        stats["cost_usd"] = response.cost_usd
 
-        # Compute cost from usage
-        input_tokens = response.usage.input_tokens
-        output_tokens = response.usage.output_tokens
-        # Haiku pricing: $0.80/M input, $4/M output
-        stats["cost_usd"] = (input_tokens * 0.80 + output_tokens * 4.0) / 1_000_000
-
-        result_json = _extract_json(full_text)
+        result_json = _extract_json(response.text)
         if result_json:
             completed, apply_errors = _apply_results(nodes, result_json)
             errors.extend(apply_errors)
