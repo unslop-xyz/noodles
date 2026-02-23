@@ -10,92 +10,88 @@ Noodles creates interactive diagrams that visualize how your code actually works
 
 ## What it does
 
-- Scans a folder and builds a manifest of your code
-- Uses OpenAI to identify user-facing entry points (CLI commands, routes, UI components)
-- Generates D2 diagrams showing how code flows from entry to outcome
-- Renders an interactive overlay to explore the diagrams
-- Tracks changes and updates diagrams incrementally when code changes
+- Builds function call graphs using tree-sitter AST parsing
+- Generates mermaid diagrams showing code flow
+- Interactive viewer (pan, zoom, drill down into sub-diagrams)
+- **Repo analyzer** - Analyze an entire repository
+- **PR analyzer** - Analyze a GitHub PR to see what changed
 
 ## Setup
 
-### Prerequisites
-
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- [d2](https://d2lang.com/) CLI for diagram rendering
-- OpenAI API key
-
-### Install dependencies
-
 ```bash
-# Using uv (recommended)
 uv sync
-
-# Or using pip
-pip install -e '.[dev]'
-```
-
-### Install d2
-
-```bash
-# macOS
-brew install d2
-
-# Or download from https://d2lang.com
-```
-
-### Configure OpenAI API key
-
-**Option 1: `.env` file (recommended)**
-
-Create a `.env` file in your project root:
-```
-OPENAI_API_KEY=your-key
-```
-The CLI automatically loads `.env` files on startup.
-
-**Option 2: Environment variable**
-```bash
-# macOS/Linux
-export OPENAI_API_KEY="your-key"
-
-# Windows (PowerShell)
-$env:OPENAI_API_KEY="your-key"
-
-# Windows (CMD)
-set OPENAI_API_KEY=your-key
-```
-
-### Optional configuration
-
-```bash
-# Point to d2 binary if not on PATH
-export UNSLOP_D2_BIN=/opt/homebrew/bin/d2
-
-# Set log level (DEBUG, INFO, WARNING, ERROR)
-export UNSLOP_LOG_LEVEL=INFO
+export ANTHROPIC_API_KEY=<your-key> # Optional to enable AI-powered enrichment of node descriptions and edge labels.
 ```
 
 ## Usage
 
+### Analyze a repository
+
 ```bash
-unslop run
+python src/agents/repo_analyzer/repo_analyzer.py <repo-url>
 ```
 
-- Use the overlay to select folders to analyze
-- Diagrams and manifests are stored in `<folder>/.unslop/`
-- Close the overlay to exit
+### Analyze a PR
 
-### Overlay controls
+```bash
+python src/agents/pr_analyzer/pr_analyzer.py <github-pr-url>
+```
 
-- **Choose folder** - Select a codebase to analyze
-- **Update** - Regenerate diagram only if code changed (incremental)
-- **Rerun** - Full rebuild from scratch
-- **?** - Hover for keyboard shortcuts and icon meanings
-- Click any node to drill into details; hover for tooltips
+Options: `--output-dir <dir>`, `--no-view`
 
-## Known rough edges
+Results saved to `src/agents/*/result_<id>/`.
 
-- Speed of diagram generation; works best on projects with fewer than 100 files for now
-- UI is intentionally verbose for debugging; simplification planned
-- Diagram quality varies; prompt tuning ongoing
+### Viewer controls
+
+- **Pan** - Click and drag
+- **Zoom** - Scroll wheel
+- **Drill down** - Click `[+]` nodes
+- **Back** - Escape
+
+> **Note**: Previous code archived under `src/archive/`
+
+## Supported languages
+
+The call graph builder uses tree-sitter for AST parsing. Currently supported:
+
+| Extension | Language   |
+|-----------|------------|
+| `.py`     | Python     |
+| `.js`     | JavaScript |
+| `.ts`     | TypeScript |
+| `.tsx`    | TSX        |
+
+### Not yet supported
+
+- **JSX (`.jsx`)** - Can be added by mapping to the JavaScript parser
+- **Other languages** - Requires adding tree-sitter grammar and function detection logic
+
+## Limitations
+
+### Call detection
+
+The call graph is built by detecting function calls in the AST. This works well for:
+- Direct function calls: `foo()`, `obj.method()`
+- Imported function calls
+
+This does **not** detect:
+- **JSX component usage** - `<MyComponent />` is not recognized as a call to `MyComponent`
+- **Dynamic calls** - `getattr(obj, 'method')()`, `obj[key]()`
+- **Callbacks passed to frameworks** - e.g., route handlers registered via decorators
+
+### React/Frontend codebases
+
+React components communicate via JSX rendering (`<Child />`) rather than direct function calls. The current AST parser doesn't recognize JSX elements as function invocations, so:
+- Component hierarchies won't show edges between parent and child components
+- Components may appear as disconnected "orphan" nodes
+- The PR analyzer may show changed components without meaningful connections
+
+### PR analyzer
+
+The PR analyzer prunes the call graph to functions affected by a PR. This works best when:
+- Changed functions call or are called by other functions
+- The codebase has interconnected function calls
+
+It produces limited results when:
+- Changes are to isolated/standalone functions
+- The codebase uses patterns not detected by AST analysis (decorators, dynamic dispatch, JSX)
