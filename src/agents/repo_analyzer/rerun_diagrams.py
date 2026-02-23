@@ -4,10 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-AGENTS_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(AGENTS_DIR))
-
-from diagram_builder.diagram_builder import build_diagrams
+from agents.diagram_builder import build_diagrams
 
 
 def main() -> None:

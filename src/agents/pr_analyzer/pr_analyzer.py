@@ -16,15 +16,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-AGENTS_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(AGENTS_DIR))
-
-from call_graph_builder.call_graph_builder import build_pr_call_graph
-from diagram_builder.diagram_builder import build_diagrams
-from full_graph_builder.full_graph_builder import build_full_graph
-
-NOODLES_ROOT = AGENTS_DIR.parent
-sys.path.insert(0, str(NOODLES_ROOT))
+from agents.diagram_builder import build_diagrams
+from agents.pr_analyzer.call_graph_builder import build_pr_call_graph
+from agents.pr_analyzer.full_graph_builder import build_full_graph
 
 AGENT_DIR = Path(__file__).resolve().parent
 

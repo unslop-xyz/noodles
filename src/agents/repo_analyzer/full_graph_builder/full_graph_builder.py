@@ -5,12 +5,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# Ensure sibling directories under agents/ are importable.
-AGENTS_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(AGENTS_DIR))
-
-from node_builder.node_builder import run_node_builder_for_file
-from edge_builder.edge_builder import run_edge_builder_for_caller
+from agents.node_builder import run_node_builder_for_file
+from agents.edge_builder import run_edge_builder_for_caller
 
 MAX_CONCURRENT_AGENTS = 20
 
@@ -186,3 +182,13 @@ def _write_consolidated_log(
     ]
 
     log_path.write_text("\n".join(summary + lines))
+
+    # Print first error to stderr for visibility
+    if total_errors > 0:
+        for r in results:
+            if isinstance(r, BaseException):
+                print(f"  Error: {r}", file=sys.stderr)
+                break
+            if r.get("errors"):
+                print(f"  Error: {r['errors'][0]}", file=sys.stderr)
+                break

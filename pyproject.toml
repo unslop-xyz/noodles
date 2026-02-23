@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
   "openai>=1.0.0",
-  "google-generativeai>=0.3.0",
+  "google-genai>=1.0.0",
   "pathspec>=0.12.1",
   "pywebview>=4.3.2",
   "python-dotenv>=1.0.0",
@@ -31,6 +31,7 @@ dev = [
   "black>=24.3.0",
   "ruff>=0.3.0",
   "pytest>=8.1.0",
+  "pytest-asyncio>=0.23.0",
 ]
 
 [project.urls]
@@ -41,7 +42,7 @@ Issues = "https://example.com/unslop/issues"
 unslop = "unslop.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/unslop"]
+packages = ["src/llm", "src/agents", "src/viewer"]
 
 [tool.black]
 line-length = 88
@@ -55,3 +56,7 @@ select = ["E", "F", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+pythonpath = ["src"]
+
+[tool.pytest_asyncio]
+mode = "auto"
