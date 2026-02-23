@@ -1,9 +1,11 @@
 """Anthropic LLM provider implementation."""
 
+import os
+
 import anthropic
 
 from .pricing import calculate_cost
-from .provider import LLMResponse
+from .provider import LLMProviderError, LLMResponse
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
@@ -14,7 +16,12 @@ def _get_client() -> anthropic.AsyncAnthropic:
     """Lazily create a shared async client."""
     global _client
     if _client is None:
-        _client = anthropic.AsyncAnthropic()
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "ANTHROPIC_API_KEY environment variable is required for Anthropic provider"
+            )
+        _client = anthropic.AsyncAnthropic(api_key=api_key)
     return _client
 
 
@@ -38,12 +45,38 @@ class AnthropicProvider:
     ) -> LLMResponse:
         """Complete a prompt using Anthropic API."""
         client = _get_client()
-        response = await client.messages.create(
-            model=self._model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
+
+        try:
+            response = await client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+        except anthropic.AuthenticationError as e:
+            raise LLMProviderError(
+                "Authentication failed. Check your ANTHROPIC_API_KEY.",
+                "Anthropic",
+                e,
+            ) from e
+        except anthropic.RateLimitError as e:
+            raise LLMProviderError(
+                "Rate limit exceeded. Please try again later.",
+                "Anthropic",
+                e,
+            ) from e
+        except anthropic.APIConnectionError as e:
+            raise LLMProviderError(
+                f"Failed to connect to Anthropic API: {e}",
+                "Anthropic",
+                e,
+            ) from e
+        except anthropic.APIError as e:
+            raise LLMProviderError(
+                f"API error: {e}",
+                "Anthropic",
+                e,
+            ) from e
 
         text = "".join(
             block.text for block in response.content if block.type == "text"

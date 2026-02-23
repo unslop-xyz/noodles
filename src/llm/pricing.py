@@ -68,6 +68,13 @@ GROQ_PRICING: dict[str, ModelPricing] = {
     "deepseek-r1-distill-llama-70b": ModelPricing(0.75, 0.99),
 }
 
+# HuggingFace Inference API pricing is not included because:
+# - HuggingFace hosts many third-party models with varying pricing
+# - Some models are free (community models, pro subscription)
+# - Enterprise pricing varies by agreement
+# - Models accessed through the router endpoint may have different costs
+# Use DEFAULT_PRICING as a conservative fallback for HuggingFace models.
+
 # Combined pricing lookup
 ALL_PRICING: dict[str, ModelPricing] = {
     **ANTHROPIC_PRICING,

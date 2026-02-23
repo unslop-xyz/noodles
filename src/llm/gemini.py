@@ -1,10 +1,12 @@
 """Google Gemini LLM provider implementation."""
 
+import os
+
 import google.genai as genai
 from google.genai import types
 
 from .pricing import calculate_cost
-from .provider import LLMResponse
+from .provider import LLMProviderError, LLMResponse
 
 DEFAULT_MODEL = "gemini-2.0-flash"
 
@@ -15,7 +17,12 @@ def _get_client() -> genai.Client:
     """Lazily create a shared client."""
     global _client
     if _client is None:
-        _client = genai.Client()
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "GOOGLE_API_KEY environment variable is required for Gemini provider"
+            )
+        _client = genai.Client(api_key=api_key)
     return _client
 
 
@@ -40,14 +47,49 @@ class GeminiProvider:
         """Complete a prompt using Gemini API."""
         client = _get_client()
 
-        response = await client.aio.models.generate_content(
-            model=self._model,
-            contents=user_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                max_output_tokens=max_tokens,
-            ),
-        )
+        try:
+            response = await client.aio.models.generate_content(
+                model=self._model,
+                contents=user_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=max_tokens,
+                ),
+            )
+        except genai.errors.AuthenticationError as e:
+            raise LLMProviderError(
+                "Authentication failed. Check your GOOGLE_API_KEY.",
+                "Gemini",
+                e,
+            ) from e
+        except genai.errors.ClientError as e:
+            error_msg = str(e)
+            if "429" in error_msg or "rate" in error_msg.lower():
+                raise LLMProviderError(
+                    "Rate limit exceeded. Please try again later.",
+                    "Gemini",
+                    e,
+                ) from e
+            raise LLMProviderError(
+                f"API error: {e}",
+                "Gemini",
+                e,
+            ) from e
+        except genai.errors.ServerError as e:
+            raise LLMProviderError(
+                f"Server error: {e}",
+                "Gemini",
+                e,
+            ) from e
+        except Exception as e:
+            # Catch connection errors and other unexpected errors
+            if "connect" in str(e).lower() or "timeout" in str(e).lower():
+                raise LLMProviderError(
+                    f"Failed to connect to Gemini API: {e}",
+                    "Gemini",
+                    e,
+                ) from e
+            raise
 
         text = response.text or ""
 

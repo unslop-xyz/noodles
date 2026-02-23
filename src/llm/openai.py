@@ -8,7 +8,7 @@ import os
 import openai
 
 from .pricing import calculate_cost
-from .provider import LLMResponse
+from .provider import LLMProviderError, LLMResponse, extract_openai_usage
 
 DEFAULT_MODEL = "gpt-4o-mini"
 
@@ -22,7 +22,16 @@ def _get_client(base_url: str | None = None) -> openai.AsyncOpenAI:
 
     # Recreate client if base_url changed
     if _client is None or _client_base_url != base_url:
-        _client = openai.AsyncOpenAI(base_url=base_url) if base_url else openai.AsyncOpenAI()
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required for OpenAI provider"
+            )
+        _client = (
+            openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+            if base_url
+            else openai.AsyncOpenAI(api_key=api_key)
+        )
         _client_base_url = base_url
     return _client
 
@@ -54,18 +63,43 @@ class OpenAIProvider:
     ) -> LLMResponse:
         """Complete a prompt using OpenAI-compatible API."""
         client = _get_client(self._base_url)
-        response = await client.chat.completions.create(
-            model=self._model,
-            max_tokens=max_tokens,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+
+        try:
+            response = await client.chat.completions.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+        except openai.AuthenticationError as e:
+            raise LLMProviderError(
+                "Authentication failed. Check your OPENAI_API_KEY.",
+                "OpenAI",
+                e,
+            ) from e
+        except openai.RateLimitError as e:
+            raise LLMProviderError(
+                "Rate limit exceeded. Please try again later.",
+                "OpenAI",
+                e,
+            ) from e
+        except openai.APIConnectionError as e:
+            raise LLMProviderError(
+                f"Failed to connect to OpenAI API: {e}",
+                "OpenAI",
+                e,
+            ) from e
+        except openai.APIError as e:
+            raise LLMProviderError(
+                f"API error: {e}",
+                "OpenAI",
+                e,
+            ) from e
 
         text = response.choices[0].message.content or ""
-        input_tokens = response.usage.prompt_tokens if response.usage else 0
-        output_tokens = response.usage.completion_tokens if response.usage else 0
+        input_tokens, output_tokens = extract_openai_usage(response)
         cost_usd = calculate_cost(self._model, input_tokens, output_tokens)
 
         return LLMResponse(

@@ -3,7 +3,7 @@
 Environment variables:
     LLM_PROVIDER: Provider name (anthropic, openai, gemini, groq, huggingface). Default: anthropic
     LLM_MODEL: Model name override. Default: provider-specific default
-    LLM_BASE_URL: Base URL for OpenAI-compatible endpoints (openai provider only)
+    LLM_BASE_URL: Base URL for OpenAI-compatible endpoints (openai, groq, huggingface)
 """
 
 import os
@@ -50,7 +50,7 @@ def get_provider(
     # Resolve model
     model_name = model or os.environ.get("LLM_MODEL")
 
-    # Resolve base_url (for openai provider)
+    # Resolve base_url (for OpenAI-compatible providers)
     resolved_base_url = base_url or os.environ.get("LLM_BASE_URL")
 
     if provider_name == "anthropic":
@@ -60,9 +60,9 @@ def get_provider(
     elif provider_name == "gemini":
         instance = GeminiProvider(model=model_name)
     elif provider_name == "groq":
-        instance = GroqProvider(model=model_name)
+        instance = GroqProvider(model=model_name, base_url=resolved_base_url)
     elif provider_name == "huggingface":
-        instance = HuggingFaceProvider(model=model_name)
+        instance = HuggingFaceProvider(model=model_name, base_url=resolved_base_url)
     else:
         valid_providers = ["anthropic", "openai", "gemini", "groq", "huggingface"]
         raise ValueError(

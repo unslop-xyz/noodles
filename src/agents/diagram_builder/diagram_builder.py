@@ -3,6 +3,8 @@
 import re
 from collections import defaultdict
 
+from utils import sanitize_id
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -200,7 +202,7 @@ def _render_flat(
         if node:
             lines.append(f"    {_mermaid_node(node, has_sub=nid in roots)}")
     for nid in sorted(node_ids & roots):
-        lines.append(f"    style {_sanitize_id(nid)} stroke-width:6px")
+        lines.append(f"    style {sanitize_id(nid)} stroke-width:6px")
     emitted: set[tuple[str, str]] = set()
     for nid in sorted(node_ids):
         for e in edge_index.get(nid, []):
@@ -380,9 +382,9 @@ def _unique_sub_name(
     """Generate a unique filename-safe name for a sub-diagram."""
     node = node_index.get(root_id)
     if node and node.get("name"):
-        base = _sanitize_id(node["name"])
+        base = sanitize_id(node["name"])
     else:
-        base = _sanitize_id(root_id.split("::")[-1])
+        base = sanitize_id(root_id.split("::")[-1])
     if base not in existing:
         return base
     i = 2
@@ -397,7 +399,7 @@ def _unique_sub_name(
 
 def _mermaid_node(node: dict, has_sub: bool = False) -> str:
     """Format a single node as a mermaid node definition line."""
-    mid = _sanitize_id(node["id"])
+    mid = sanitize_id(node["id"])
     label = _sanitize_text(node.get("name") or node["id"].split("::")[-1])
     if has_sub:
         label += " [+]"
@@ -414,8 +416,8 @@ def _mermaid_node(node: dict, has_sub: bool = False) -> str:
 
 def _mermaid_edge(from_id: str, to_id: str, edge: dict | None) -> str:
     """Format a single edge as a mermaid edge line."""
-    sfrom = _sanitize_id(from_id)
-    sto = _sanitize_id(to_id)
+    sfrom = sanitize_id(from_id)
+    sto = sanitize_id(to_id)
 
     if edge is None:
         return f"{sfrom} --> {sto}"
@@ -434,13 +436,6 @@ def _mermaid_edge(from_id: str, to_id: str, edge: dict | None) -> str:
 # ---------------------------------------------------------------------------
 # Sanitization
 # ---------------------------------------------------------------------------
-
-def _sanitize_id(node_id: str) -> str:
-    """Convert a call graph node ID to a valid mermaid identifier."""
-    s = re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s or "node"
-
 
 def _sanitize_text(text: str) -> str:
     """Sanitize text for use inside mermaid labels."""
