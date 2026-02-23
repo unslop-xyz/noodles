@@ -61,6 +61,8 @@ def load_result(result_dir: str | Path) -> dict:
             "tag": node.get("tag", ""),
             "file_path": file_path,
             "function": func_name,
+            "status": node.get("status", "unchanged"),
+            "update": node.get("update", ""),
         }
 
     # Build edges metadata lookup: "sanitized_from -> sanitized_to" -> metadata
@@ -113,7 +115,9 @@ def load_result(result_dir: str | Path) -> dict:
                 continue
             mermaid_id = match.group(1)
             if mermaid_id in mermaid_id_to_sub:
-                nav[mermaid_id] = mermaid_id_to_sub[mermaid_id]
+                target = mermaid_id_to_sub[mermaid_id]
+                if target != diagram_name:  # Don't allow self-references
+                    nav[mermaid_id] = target
         if nav:
             navigation[diagram_name] = nav
 

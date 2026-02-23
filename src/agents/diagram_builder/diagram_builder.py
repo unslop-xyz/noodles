@@ -78,7 +78,9 @@ def build_diagrams(
         reachable = _collect_bidirectional(
             changed_ids, edge_index, reverse_edge_index, all_node_ids
         )
-        entry_ids = changed_ids
+        # Find roots of the reachable subgraph (nodes with no incoming edges
+        # from other reachable nodes) to ensure connecting paths are shown
+        entry_ids = _find_subgraph_roots(reachable, reverse_edge_index)
     elif start_points:
         # Repo analysis: traverse from start points
         reachable = _collect_reachable(start_points, edge_index, all_node_ids)
@@ -122,6 +124,26 @@ def _collect_reachable(
             if e["to"] in scope:
                 stack.append(e["to"])
     return reachable
+
+
+def _find_subgraph_roots(
+    subgraph: set[str],
+    reverse_edge_index: dict[str, list[dict]],
+) -> list[str]:
+    """Find root nodes of a subgraph (nodes with no incoming edges from within).
+
+    These are the natural entry points for rendering the subgraph top-down.
+    """
+    roots = []
+    for nid in subgraph:
+        has_internal_caller = False
+        for e in reverse_edge_index.get(nid, []):
+            if e["from"] in subgraph:
+                has_internal_caller = True
+                break
+        if not has_internal_caller:
+            roots.append(nid)
+    return sorted(roots)
 
 
 def _collect_bidirectional(
