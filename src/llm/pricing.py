@@ -56,11 +56,24 @@ GEMINI_PRICING: dict[str, ModelPricing] = {
     "gemini-2.0-flash-lite": ModelPricing(0.10, 0.40),
 }
 
+# Groq models
+GROQ_PRICING: dict[str, ModelPricing] = {
+    # Llama models
+    "llama-3.1-8b-instant": ModelPricing(0.05, 0.08),
+    "llama-3.3-70b-versatile": ModelPricing(0.59, 0.79),
+    "llama-4-scout-17b-16e-instruct": ModelPricing(0.11, 0.34),
+    # Qwen
+    "qwen-qwq-32b": ModelPricing(0.29, 0.39),
+    # DeepSeek
+    "deepseek-r1-distill-llama-70b": ModelPricing(0.75, 0.99),
+}
+
 # Combined pricing lookup
 ALL_PRICING: dict[str, ModelPricing] = {
     **ANTHROPIC_PRICING,
     **OPENAI_PRICING,
     **GEMINI_PRICING,
+    **GROQ_PRICING,
 }
 
 # Default pricing for unknown models (conservative estimate)

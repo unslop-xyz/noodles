@@ -7,6 +7,8 @@ import pytest
 from llm import LLMResponse, calculate_cost, get_pricing, get_provider
 from llm.anthropic import AnthropicProvider
 from llm.gemini import GeminiProvider
+from llm.groq import GroqProvider
+from llm.huggingface import HuggingFaceProvider
 from llm.openai import OpenAIProvider
 from llm.pricing import DEFAULT_PRICING, ModelPricing
 
@@ -36,6 +38,19 @@ class TestPricing:
         # Gemini 2.0 Flash: $0.10/M input, $0.40/M output
         cost = calculate_cost("gemini-2.0-flash", 1_000_000, 1_000_000)
         assert cost == pytest.approx(0.50)
+
+    def test_calculate_cost_groq_llama(self):
+        """Cost calculation for Groq Llama 3.3 70B."""
+        # Llama 3.3 70B: $0.59/M input, $0.79/M output
+        cost = calculate_cost("llama-3.3-70b-versatile", 1_000_000, 1_000_000)
+        assert cost == pytest.approx(1.38)
+
+    def test_calculate_cost_huggingface_uses_default(self):
+        """HuggingFace models use default pricing (provider pricing varies)."""
+        # HuggingFace pricing depends on the inference provider, so we use default
+        cost = calculate_cost("moonshotai/Kimi-K2-Instruct", 1_000_000, 1_000_000)
+        expected = DEFAULT_PRICING.input_per_million + DEFAULT_PRICING.output_per_million
+        assert cost == pytest.approx(expected)
 
     def test_calculate_cost_unknown_model_uses_default(self):
         """Unknown models use default pricing."""
@@ -137,6 +152,22 @@ class TestProviderFactory:
         monkeypatch.delenv("LLM_MODEL", raising=False)
         provider = get_provider(provider="gemini")
         assert isinstance(provider, GeminiProvider)
+
+    def test_groq_provider_creation(self, monkeypatch):
+        """Groq provider can be created."""
+        monkeypatch.delenv("LLM_MODEL", raising=False)
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+        provider = get_provider(provider="groq")
+        assert isinstance(provider, GroqProvider)
+        assert provider.model == "llama-3.3-70b-versatile"
+
+    def test_huggingface_provider_creation(self, monkeypatch):
+        """HuggingFace provider can be created."""
+        monkeypatch.delenv("LLM_MODEL", raising=False)
+        monkeypatch.setenv("HF_TOKEN", "test-token")
+        provider = get_provider(provider="huggingface")
+        assert isinstance(provider, HuggingFaceProvider)
+        assert provider.model == "moonshotai/Kimi-K2-Instruct"
 
 
 # ---------------------------------------------------------------------------
@@ -286,3 +317,81 @@ class TestGeminiProviderComplete:
 
         assert response.input_tokens == 0
         assert response.output_tokens == 0
+
+
+class TestGroqProviderComplete:
+    """Tests for GroqProvider.complete with mocked API."""
+
+    @pytest.mark.asyncio
+    async def test_complete_returns_response(self):
+        """complete() should return LLMResponse with correct fields."""
+        # Mock the openai client (Groq uses OpenAI-compatible API)
+        mock_message = MagicMock()
+        mock_message.content = "Test response from Groq"
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_usage = MagicMock()
+        mock_usage.prompt_tokens = 100
+        mock_usage.completion_tokens = 50
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = mock_usage
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        with patch("llm.groq._get_client", return_value=mock_client):
+            provider = GroqProvider(model="llama-3.3-70b-versatile")
+            response = await provider.complete(
+                system_prompt="You are a helpful assistant.",
+                user_prompt="Hello!",
+            )
+
+        assert isinstance(response, LLMResponse)
+        assert response.text == "Test response from Groq"
+        assert response.input_tokens == 100
+        assert response.output_tokens == 50
+        assert response.model == "llama-3.3-70b-versatile"
+        assert response.cost_usd > 0
+
+
+class TestHuggingFaceProviderComplete:
+    """Tests for HuggingFaceProvider.complete with mocked API."""
+
+    @pytest.mark.asyncio
+    async def test_complete_returns_response(self):
+        """complete() should return LLMResponse with correct fields."""
+        # Mock the openai client (HuggingFace uses OpenAI-compatible API)
+        mock_message = MagicMock()
+        mock_message.content = "Test response from HuggingFace"
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_usage = MagicMock()
+        mock_usage.prompt_tokens = 100
+        mock_usage.completion_tokens = 50
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = mock_usage
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        with patch("llm.huggingface._get_client", return_value=mock_client):
+            provider = HuggingFaceProvider(model="moonshotai/Kimi-K2-Instruct")
+            response = await provider.complete(
+                system_prompt="You are a helpful assistant.",
+                user_prompt="Hello!",
+            )
+
+        assert isinstance(response, LLMResponse)
+        assert response.text == "Test response from HuggingFace"
+        assert response.input_tokens == 100
+        assert response.output_tokens == 50
+        assert response.model == "moonshotai/Kimi-K2-Instruct"
+        assert response.cost_usd > 0

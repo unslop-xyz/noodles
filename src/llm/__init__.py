@@ -8,7 +8,7 @@ Usage:
     print(response.text, response.cost_usd)
 
 Environment variables:
-    LLM_PROVIDER: Provider name (anthropic, openai, gemini). Default: anthropic
+    LLM_PROVIDER: Provider name (anthropic, openai, gemini, groq, huggingface). Default: anthropic
     LLM_MODEL: Model name override. Default: provider-specific default
     LLM_BASE_URL: Base URL for OpenAI-compatible endpoints (openai provider only)
 """

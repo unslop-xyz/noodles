@@ -1,7 +1,7 @@
 """LLM provider configuration and factory.
 
 Environment variables:
-    LLM_PROVIDER: Provider name (anthropic, openai, gemini). Default: anthropic
+    LLM_PROVIDER: Provider name (anthropic, openai, gemini, groq, huggingface). Default: anthropic
     LLM_MODEL: Model name override. Default: provider-specific default
     LLM_BASE_URL: Base URL for OpenAI-compatible endpoints (openai provider only)
 """
@@ -12,10 +12,12 @@ from typing import Literal
 
 from .anthropic import AnthropicProvider
 from .gemini import GeminiProvider
+from .groq import GroqProvider
+from .huggingface import HuggingFaceProvider
 from .openai import OpenAIProvider
 from .provider import LLMProvider
 
-ProviderName = Literal["anthropic", "openai", "gemini"]
+ProviderName = Literal["anthropic", "openai", "gemini", "groq", "huggingface"]
 
 DEFAULT_PROVIDER: ProviderName = "anthropic"
 
@@ -57,8 +59,12 @@ def get_provider(
         instance = OpenAIProvider(model=model_name, base_url=resolved_base_url)
     elif provider_name == "gemini":
         instance = GeminiProvider(model=model_name)
+    elif provider_name == "groq":
+        instance = GroqProvider(model=model_name)
+    elif provider_name == "huggingface":
+        instance = HuggingFaceProvider(model=model_name)
     else:
-        valid_providers = ["anthropic", "openai", "gemini"]
+        valid_providers = ["anthropic", "openai", "gemini", "groq", "huggingface"]
         raise ValueError(
             f"Unknown provider: {provider_name}. Valid providers: {valid_providers}"
         )
