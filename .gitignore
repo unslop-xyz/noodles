@@ -11,3 +11,5 @@ dist/
 /.vscode
 .unslop/
 .DS_Store
+node_modules/
+result_*/

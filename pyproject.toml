@@ -7,7 +7,7 @@ name = "unslop"
 version = "0.1.0"
 description = "A simple starter framework for the unslop Python library."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "unslop" }]
 license = { file = "LICENSE" }
 keywords = ["template", "library"]
@@ -22,6 +22,8 @@ dependencies = [
   "pathspec>=0.12.1",
   "pywebview>=4.3.2",
   "python-dotenv>=1.0.0",
+  "tree-sitter-language-pack>=0.13.0",
+  "anthropic>=0.40.0",
 ]
 
 [project.optional-dependencies]
