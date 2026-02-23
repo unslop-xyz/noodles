@@ -69,6 +69,7 @@ class GeminiProvider:
                     "Rate limit exceeded. Please try again later.",
                     "Gemini",
                     e,
+                    retryable=True,
                 ) from e
             raise LLMProviderError(
                 f"API error: {e}",
@@ -80,6 +81,7 @@ class GeminiProvider:
                 f"Server error: {e}",
                 "Gemini",
                 e,
+                retryable=True,
             ) from e
         except Exception as e:
             # Catch connection errors and other unexpected errors
@@ -88,6 +90,7 @@ class GeminiProvider:
                     f"Failed to connect to Gemini API: {e}",
                     "Gemini",
                     e,
+                    retryable=True,
                 ) from e
             raise
 

@@ -15,7 +15,7 @@ from .gemini import GeminiProvider
 from .groq import GroqProvider
 from .huggingface import HuggingFaceProvider
 from .openai import OpenAIProvider
-from .provider import LLMProvider
+from .provider import LLMProvider, RetryingProvider
 
 ProviderName = Literal["anthropic", "openai", "gemini", "groq", "huggingface"]
 
@@ -75,4 +75,4 @@ def get_provider(
         print(f"LLM: {provider_name} / {instance.model}", file=sys.stderr)
         _logged_provider = True
 
-    return instance
+    return RetryingProvider(instance)

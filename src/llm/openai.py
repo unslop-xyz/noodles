@@ -84,12 +84,14 @@ class OpenAIProvider:
                 "Rate limit exceeded. Please try again later.",
                 "OpenAI",
                 e,
+                retryable=True,
             ) from e
         except openai.APIConnectionError as e:
             raise LLMProviderError(
                 f"Failed to connect to OpenAI API: {e}",
                 "OpenAI",
                 e,
+                retryable=True,
             ) from e
         except openai.APIError as e:
             raise LLMProviderError(

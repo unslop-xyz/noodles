@@ -9,7 +9,7 @@ from agents.node_builder import run_node_builder_for_file
 from agents.edge_builder import run_edge_builder_for_caller
 from agents.pr_analyzer.full_graph_builder.changes_builder import run_changes_builder_for_file
 
-MAX_CONCURRENT_AGENTS = 20
+MAX_CONCURRENT_AGENTS = 12
 
 
 def _print_progress(label: str, done: int, total: int) -> None:

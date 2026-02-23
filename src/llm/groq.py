@@ -87,12 +87,14 @@ class GroqProvider:
                 "Rate limit exceeded. Please try again later.",
                 "Groq",
                 e,
+                retryable=True,
             ) from e
         except openai.APIConnectionError as e:
             raise LLMProviderError(
                 f"Failed to connect to Groq API: {e}",
                 "Groq",
                 e,
+                retryable=True,
             ) from e
         except openai.APIError as e:
             raise LLMProviderError(

@@ -64,12 +64,14 @@ class AnthropicProvider:
                 "Rate limit exceeded. Please try again later.",
                 "Anthropic",
                 e,
+                retryable=True,
             ) from e
         except anthropic.APIConnectionError as e:
             raise LLMProviderError(
                 f"Failed to connect to Anthropic API: {e}",
                 "Anthropic",
                 e,
+                retryable=True,
             ) from e
         except anthropic.APIError as e:
             raise LLMProviderError(

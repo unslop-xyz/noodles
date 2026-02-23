@@ -87,12 +87,14 @@ class HuggingFaceProvider:
                 "Rate limit exceeded. Please try again later.",
                 "HuggingFace",
                 e,
+                retryable=True,
             ) from e
         except openai.APIConnectionError as e:
             raise LLMProviderError(
                 f"Failed to connect to HuggingFace API: {e}",
                 "HuggingFace",
                 e,
+                retryable=True,
             ) from e
         except openai.APIError as e:
             raise LLMProviderError(
