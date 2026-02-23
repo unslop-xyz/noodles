@@ -20,7 +20,7 @@ Noodles creates interactive diagrams that visualize how your code actually works
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - [d2](https://d2lang.com/) CLI for diagram rendering
 - OpenAI API key
