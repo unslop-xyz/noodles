@@ -6,6 +6,10 @@ import uuid
 import webbrowser
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 AGENTS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(AGENTS_DIR))
 

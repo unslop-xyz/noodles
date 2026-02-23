@@ -20,8 +20,11 @@ Noodles creates interactive diagrams that visualize how your code actually works
 
 ```bash
 uv sync
-export ANTHROPIC_API_KEY=<your-key> # Optional to enable AI-powered enrichment of node descriptions and edge labels.
+cp .env.example .env
+# Edit .env and add your Anthropic API key
 ```
+
+The `ANTHROPIC_API_KEY` enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
 
 ## Usage
 
