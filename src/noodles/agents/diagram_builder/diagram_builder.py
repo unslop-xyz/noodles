@@ -3,7 +3,7 @@
 import re
 from collections import defaultdict
 
-from utils import _sanitize_id
+from noodles.utils import _sanitize_id
 
 
 # ---------------------------------------------------------------------------

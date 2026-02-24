@@ -16,9 +16,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agents.diagram_builder import build_diagrams
-from agents.pr_analyzer.call_graph_builder import build_pr_call_graph
-from agents.pr_analyzer.full_graph_builder import build_full_graph
+from noodles.agents.diagram_builder import build_diagrams
+from noodles.agents.pr_analyzer.call_graph_builder import build_pr_call_graph
+from noodles.agents.pr_analyzer.full_graph_builder import build_full_graph
 
 AGENT_DIR = Path(__file__).resolve().parent
 
@@ -283,8 +283,8 @@ def launch_viewer(result_dir: Path) -> None:
     """Start the viewer server and open the browser."""
     import webbrowser
 
-    from viewer.data_loader import load_result
-    from viewer.server import start_server
+    from noodles.viewer.data_loader import load_result
+    from noodles.viewer.server import start_server
 
     data = load_result(str(result_dir))
     server = start_server(data, port=0)

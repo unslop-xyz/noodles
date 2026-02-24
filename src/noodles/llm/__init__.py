@@ -1,7 +1,7 @@
 """LLM provider abstraction for multiple AI providers.
 
 Usage:
-    from llm import get_provider, LLMResponse
+    from noodles.llm import get_provider, LLMResponse
 
     provider = get_provider()  # Uses env vars for configuration
     response = await provider.complete(system_prompt, user_prompt)

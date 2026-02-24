@@ -3,14 +3,14 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "unslop"
+name = "noodles"
 version = "0.1.0"
-description = "A simple starter framework for the unslop Python library."
+description = "AI-powered code visualization and call graph analysis"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "unslop" }]
+authors = [{ name = "unslop-xyz" }]
 license = { file = "LICENSE" }
-keywords = ["template", "library"]
+keywords = ["code-visualization", "call-graph", "ast", "mermaid", "ai"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
@@ -35,14 +35,14 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://example.com/unslop"
-Issues = "https://example.com/unslop/issues"
+Homepage = "https://github.com/unslop-xyz/noodles"
+Issues = "https://github.com/unslop-xyz/noodles/issues"
 
 [project.scripts]
-unslop = "unslop.cli:main"
+noodles = "noodles.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/llm", "src/agents", "src/viewer"]
+packages = ["src/noodles"]
 
 [tool.black]
 line-length = 88

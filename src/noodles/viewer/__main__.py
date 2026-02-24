@@ -1,4 +1,4 @@
-"""CLI entry point: python -m src.viewer <result_dir>"""
+"""CLI entry point: python -m noodles.viewer <result_dir>"""
 
 import argparse
 import sys

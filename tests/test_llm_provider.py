@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from llm import LLMResponse, calculate_cost, get_pricing, get_provider
-from llm.anthropic import AnthropicProvider
-from llm.gemini import GeminiProvider
-from llm.groq import GroqProvider
-from llm.huggingface import HuggingFaceProvider
-from llm.openai import OpenAIProvider
-from llm.pricing import DEFAULT_PRICING, ModelPricing
+from noodles.llm import LLMResponse, calculate_cost, get_pricing, get_provider
+from noodles.llm.anthropic import AnthropicProvider
+from noodles.llm.gemini import GeminiProvider
+from noodles.llm.groq import GroqProvider
+from noodles.llm.huggingface import HuggingFaceProvider
+from noodles.llm.openai import OpenAIProvider
+from noodles.llm.pricing import DEFAULT_PRICING, ModelPricing
 
 
 # ---------------------------------------------------------------------------
@@ -92,14 +92,14 @@ class TestProviderFactory:
         monkeypatch.delenv("LLM_PROVIDER", raising=False)
         monkeypatch.delenv("LLM_MODEL", raising=False)
         provider = get_provider()
-        assert isinstance(provider, AnthropicProvider)
+        assert isinstance(provider._provider, AnthropicProvider)
 
     def test_provider_from_env_var(self, monkeypatch):
         """Provider can be set via LLM_PROVIDER env var."""
         monkeypatch.setenv("LLM_PROVIDER", "openai")
         monkeypatch.delenv("LLM_MODEL", raising=False)
         provider = get_provider()
-        assert isinstance(provider, OpenAIProvider)
+        assert isinstance(provider._provider, OpenAIProvider)
 
     def test_model_from_env_var(self, monkeypatch):
         """Model can be set via LLM_MODEL env var."""
@@ -112,7 +112,7 @@ class TestProviderFactory:
         """Explicit provider argument overrides env var."""
         monkeypatch.setenv("LLM_PROVIDER", "openai")
         provider = get_provider(provider="gemini")
-        assert isinstance(provider, GeminiProvider)
+        assert isinstance(provider._provider, GeminiProvider)
 
     def test_explicit_model_overrides_env(self, monkeypatch):
         """Explicit model argument overrides env var."""
@@ -126,14 +126,14 @@ class TestProviderFactory:
         provider = get_provider(
             provider="openai", base_url="http://localhost:8080/v1"
         )
-        assert isinstance(provider, OpenAIProvider)
-        assert provider._base_url == "http://localhost:8080/v1"
+        assert isinstance(provider._provider, OpenAIProvider)
+        assert provider._provider._base_url == "http://localhost:8080/v1"
 
     def test_base_url_from_env_var(self, monkeypatch):
         """Base URL can be set via LLM_BASE_URL env var."""
         monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1")
         provider = get_provider(provider="openai")
-        assert provider._base_url == "http://localhost:11434/v1"
+        assert provider._provider._base_url == "http://localhost:11434/v1"
 
     def test_invalid_provider_raises_error(self, monkeypatch):
         """Invalid provider name raises ValueError."""
@@ -145,20 +145,20 @@ class TestProviderFactory:
         """Provider names are case-insensitive."""
         monkeypatch.setenv("LLM_PROVIDER", "ANTHROPIC")
         provider = get_provider()
-        assert isinstance(provider, AnthropicProvider)
+        assert isinstance(provider._provider, AnthropicProvider)
 
     def test_gemini_provider_creation(self, monkeypatch):
         """Gemini provider can be created."""
         monkeypatch.delenv("LLM_MODEL", raising=False)
         provider = get_provider(provider="gemini")
-        assert isinstance(provider, GeminiProvider)
+        assert isinstance(provider._provider, GeminiProvider)
 
     def test_groq_provider_creation(self, monkeypatch):
         """Groq provider can be created."""
         monkeypatch.delenv("LLM_MODEL", raising=False)
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         provider = get_provider(provider="groq")
-        assert isinstance(provider, GroqProvider)
+        assert isinstance(provider._provider, GroqProvider)
         assert provider.model == "llama-3.3-70b-versatile"
 
     def test_huggingface_provider_creation(self, monkeypatch):
@@ -166,7 +166,7 @@ class TestProviderFactory:
         monkeypatch.delenv("LLM_MODEL", raising=False)
         monkeypatch.setenv("HF_TOKEN", "test-token")
         provider = get_provider(provider="huggingface")
-        assert isinstance(provider, HuggingFaceProvider)
+        assert isinstance(provider._provider, HuggingFaceProvider)
         assert provider.model == "moonshotai/Kimi-K2-Instruct"
 
 
@@ -190,7 +190,7 @@ class TestAnthropicProviderComplete:
         mock_client = MagicMock()
         mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-        with patch("llm.anthropic._get_client", return_value=mock_client):
+        with patch("noodles.llm.anthropic._get_client", return_value=mock_client):
             provider = AnthropicProvider(model="claude-haiku-4-5-20251001")
             response = await provider.complete(
                 system_prompt="You are a helpful assistant.",
@@ -229,7 +229,7 @@ class TestOpenAIProviderComplete:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        with patch("llm.openai._get_client", return_value=mock_client):
+        with patch("noodles.llm.openai._get_client", return_value=mock_client):
             provider = OpenAIProvider(model="gpt-4o-mini")
             response = await provider.complete(
                 system_prompt="You are a helpful assistant.",
@@ -259,7 +259,7 @@ class TestOpenAIProviderComplete:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        with patch("llm.openai._get_client", return_value=mock_client):
+        with patch("noodles.llm.openai._get_client", return_value=mock_client):
             provider = OpenAIProvider()
             response = await provider.complete("System", "User")
 
@@ -287,7 +287,7 @@ class TestGeminiProviderComplete:
         mock_client = MagicMock()
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        with patch("llm.gemini._get_client", return_value=mock_client):
+        with patch("noodles.llm.gemini._get_client", return_value=mock_client):
             provider = GeminiProvider(model="gemini-2.0-flash")
             response = await provider.complete(
                 system_prompt="You are a helpful assistant.",
@@ -311,7 +311,7 @@ class TestGeminiProviderComplete:
         mock_client = MagicMock()
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        with patch("llm.gemini._get_client", return_value=mock_client):
+        with patch("noodles.llm.gemini._get_client", return_value=mock_client):
             provider = GeminiProvider()
             response = await provider.complete("System", "User")
 
@@ -343,7 +343,7 @@ class TestGroqProviderComplete:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        with patch("llm.groq._get_client", return_value=mock_client):
+        with patch("noodles.llm.groq._get_client", return_value=mock_client):
             provider = GroqProvider(model="llama-3.3-70b-versatile")
             response = await provider.complete(
                 system_prompt="You are a helpful assistant.",
@@ -382,7 +382,7 @@ class TestHuggingFaceProviderComplete:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        with patch("llm.huggingface._get_client", return_value=mock_client):
+        with patch("noodles.llm.huggingface._get_client", return_value=mock_client):
             provider = HuggingFaceProvider(model="moonshotai/Kimi-K2-Instruct")
             response = await provider.complete(
                 system_prompt="You are a helpful assistant.",

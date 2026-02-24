@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from utils import _sanitize_id
+from noodles.utils import _sanitize_id
 
 
 def load_result(result_dir: str | Path) -> dict:

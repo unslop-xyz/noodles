@@ -5,9 +5,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from agents.node_builder import run_node_builder_for_file
-from agents.edge_builder import run_edge_builder_for_caller
-from agents.pr_analyzer.full_graph_builder.changes_builder import run_changes_builder_for_file
+from noodles.agents.node_builder import run_node_builder_for_file
+from noodles.agents.edge_builder import run_edge_builder_for_caller
+from noodles.agents.pr_analyzer.full_graph_builder.changes_builder import run_changes_builder_for_file
 
 MAX_CONCURRENT_AGENTS = 12
 

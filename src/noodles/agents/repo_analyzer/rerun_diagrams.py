@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from agents.diagram_builder import build_diagrams
+from noodles.agents.diagram_builder import build_diagrams
 
 
 def main() -> None:

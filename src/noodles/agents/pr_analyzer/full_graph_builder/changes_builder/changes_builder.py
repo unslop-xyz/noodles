@@ -9,7 +9,7 @@ import re
 import time
 from pathlib import Path
 
-from llm import get_provider
+from noodles.llm import get_provider
 
 AGENT_DIR = Path(__file__).parent
 AGENT_NAME = "changes_builder"
