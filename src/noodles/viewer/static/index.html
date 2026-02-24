@@ -237,6 +237,14 @@
 
 <script>
 (function() {
+  // ---- HTML escaping for XSS prevention ----
+  function escapeHtml(str) {
+    if (str == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+
   // ---- State ----
   let DATA = null;       // data bundle from /api/data
   let navStack = [];     // [{diagramName, title}]
@@ -269,7 +277,7 @@
     startOnLoad: false,
     theme: 'default',
     flowchart: { curve: 'basis', useMaxWidth: false },
-    securityLevel: 'loose',
+    securityLevel: 'strict',
   });
 
   fetch('/api/data')
@@ -396,17 +404,18 @@
   // ---- Tooltips ----
   function showNodeTooltip(e, meta, mermaidId) {
     if (!meta) {
-      tooltip.innerHTML = `<div class="tt-name">${mermaidId}</div>`;
+      tooltip.innerHTML = `<div class="tt-name">${escapeHtml(mermaidId)}</div>`;
     } else {
-      const badge = `<span class="tt-badge ${meta.type}">${meta.type.replace('_',' ')}</span>`;
-      const tagHtml = meta.tag ? `<span class="tt-badge ${meta.tag}">${meta.tag}</span>` : '';
+      const typeText = escapeHtml((meta.type || '').replace('_',' '));
+      const badge = `<span class="tt-badge ${escapeHtml(meta.type)}">${typeText}</span>`;
+      const tagHtml = meta.tag ? `<span class="tt-badge ${escapeHtml(meta.tag)}">${escapeHtml(meta.tag)}</span>` : '';
       const updateHtml = (meta.status === 'updated' && meta.update)
-        ? `<div class="tt-update">${meta.update}</div>`
+        ? `<div class="tt-update">${escapeHtml(meta.update)}</div>`
         : '';
       tooltip.innerHTML = `
-        <div class="tt-name">${meta.name}${badge}${tagHtml}</div>
-        ${meta.description ? `<div class="tt-desc">${meta.description}</div>` : ''}
-        ${meta.file_path ? `<div class="tt-file">${meta.file_path}::${meta.function}</div>` : ''}
+        <div class="tt-name">${escapeHtml(meta.name)}${badge}${tagHtml}</div>
+        ${meta.description ? `<div class="tt-desc">${escapeHtml(meta.description)}</div>` : ''}
+        ${meta.file_path ? `<div class="tt-file">${escapeHtml(meta.file_path)}::${escapeHtml(meta.function)}</div>` : ''}
         ${updateHtml}
       `;
     }
@@ -426,15 +435,15 @@
     }
 
     if (edgeMeta) {
-      let html = `<div class="tt-edge-label">${edgeMeta.label}</div>`;
-      if (edgeMeta.description) html += `<div class="tt-desc">${edgeMeta.description}</div>`;
-      const idx = edgeMeta.index != null ? edgeMeta.index : 'N/A';
+      let html = `<div class="tt-edge-label">${escapeHtml(edgeMeta.label)}</div>`;
+      if (edgeMeta.description) html += `<div class="tt-desc">${escapeHtml(edgeMeta.description)}</div>`;
+      const idx = edgeMeta.index != null ? escapeHtml(edgeMeta.index) : 'N/A';
       html += `<div class="tt-row">Index: <span>${idx}</span></div>`;
-      const cond = edgeMeta.condition || 'None';
+      const cond = escapeHtml(edgeMeta.condition) || 'None';
       html += `<div class="tt-row">Condition: <span>${cond}</span></div>`;
       tooltip.innerHTML = html;
     } else {
-      tooltip.innerHTML = `<div class="tt-edge-label">${labelText}</div>`;
+      tooltip.innerHTML = `<div class="tt-edge-label">${escapeHtml(labelText)}</div>`;
     }
     tooltip.style.display = 'block';
     positionTooltip(e);
@@ -486,7 +495,7 @@
     navStack.forEach((item, i) => {
       if (i > 0) html += '<span class="crumb-sep">›</span>';
       const isCurrent = i === navStack.length - 1;
-      html += `<span class="crumb ${isCurrent ? 'current' : ''}" data-index="${i}">${item.title}</span>`;
+      html += `<span class="crumb ${isCurrent ? 'current' : ''}" data-index="${i}">${escapeHtml(item.title)}</span>`;
     });
     breadcrumb.innerHTML = html;
 

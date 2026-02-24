@@ -6,6 +6,7 @@ Usage:
 
 import asyncio
 import json
+import os
 import re
 import subprocess
 import sys
@@ -113,6 +114,10 @@ async def analyze_pr(
         sub_file.write_text(sub_content)
         print(f"  Sub-diagram:   {sub_file}")
 
+    # Step 6: Generate viewer bundle and HTML
+    from noodles.viewer.data_loader import write_viewer_files
+    write_viewer_files(result_dir)
+
     return result_dir
 
 
@@ -190,6 +195,13 @@ def _clone_and_setup(
     print(f"  Cloning {owner}/{repo} ...")
     if not _run_git(["gh", "repo", "clone", f"{owner}/{repo}", str(repo_dir)], timeout=300):
         return None
+
+    # Configure git to use GH_TOKEN for authentication (gh clone doesn't set this up)
+    gh_token = os.environ.get("GH_TOKEN")
+    if gh_token:
+        # Update remote URL to include token for authentication
+        auth_url = f"https://x-access-token:{gh_token}@github.com/{owner}/{repo}.git"
+        _run_git(["git", "remote", "set-url", "origin", auth_url], cwd=repo_dir)
 
     # Fetch the PR head ref
     print(f"  Fetching PR #{pr_number} head ...")

@@ -120,3 +120,67 @@ def load_result(result_dir: str | Path) -> dict:
         "edges": edges,
         "id_map": id_map,
     }
+
+
+def write_viewer_files(result_dir: str | Path) -> None:
+    """Generate and write viewer bundle and HTML files.
+
+    Args:
+        result_dir: Path to the result folder containing call_graph.json
+                    and diagram_*.mmd files.
+
+    Writes:
+        - viewer_bundle.json: JSON data bundle for the viewer
+        - viewer.html: Self-contained HTML viewer with embedded data
+    """
+    result_path = Path(result_dir)
+
+    print("Generating viewer bundle ...")
+    viewer_bundle = load_result(result_path)
+    viewer_bundle_file = result_path / "viewer_bundle.json"
+    viewer_bundle_file.write_text(json.dumps(viewer_bundle))
+    print(f"  Viewer bundle: {viewer_bundle_file}")
+
+    viewer_html = generate_viewer_html(result_path)
+    viewer_html_file = result_path / "viewer.html"
+    viewer_html_file.write_text(viewer_html)
+    print(f"  Viewer HTML:   {viewer_html_file}")
+
+
+def generate_viewer_html(result_dir: str | Path) -> str:
+    """Generate a self-contained HTML viewer with embedded data.
+
+    Args:
+        result_dir: Path to the result folder containing call_graph.json
+                    and diagram_*.mmd files.
+
+    Returns:
+        Complete HTML string that can be saved as viewer.html.
+    """
+    bundle = load_result(result_dir)
+    template_path = Path(__file__).parent / "static/index.html"
+    template = template_path.read_text(encoding="utf-8")
+
+    # Replace the fetch() block with inline data
+    # Original pattern fetches from /api/data, we replace with embedded JSON
+    fetch_block = """fetch('/api/data')
+    .then(r => r.json())
+    .then(data => {
+      DATA = data;
+      loading.style.display = 'none';
+      navigateTo('main', 'Main');
+    })
+    .catch(err => {
+      loading.textContent = 'Failed to load data: ' + err.message;
+    });"""
+
+    # Use setTimeout to defer execution until after all variables are declared
+    # (the original fetch was async so this wasn't needed)
+    inline_code = f"""DATA = {json.dumps(bundle)};
+  setTimeout(() => {{
+    loading.style.display = 'none';
+    navigateTo('main', 'Main');
+  }}, 0);"""
+
+    html = template.replace(fetch_block, inline_code)
+    return html

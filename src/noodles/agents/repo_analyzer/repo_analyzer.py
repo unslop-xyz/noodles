@@ -88,6 +88,10 @@ async def analyze_repo(
         sub_file.write_text(sub_content)
         print(f"  Sub-diagram:   {sub_file}")
 
+    # Step 6: Generate viewer bundle and HTML
+    from noodles.viewer.data_loader import write_viewer_files
+    write_viewer_files(result_dir)
+
     return result_dir
 
 
