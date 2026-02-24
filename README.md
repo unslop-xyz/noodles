@@ -8,6 +8,8 @@ Noodles creates interactive diagrams that visualize how your code actually works
 
 ![noodles demo](assets/demo.gif)
 
+Hosted version available at https://unslop.xyz.
+
 ## What it does
 
 - Builds function call graphs using tree-sitter AST parsing
