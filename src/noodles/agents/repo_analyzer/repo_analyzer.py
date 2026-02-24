@@ -46,17 +46,53 @@ async def analyze_repo(
     if not _clone_repo(repo_url, repo_dir):
         return None
 
-    # Step 2: Build the AST call graph
+    # Use shared implementation
+    return await _analyze_repo_impl(repo_dir, result_dir, enrich=True)
+
+
+async def analyze_local_repo(
+    repo_path: Path,
+    output_dir: Path,
+    enrich: bool = True,
+) -> Path:
+    """Analyze a local repository (no cloning needed).
+
+    Args:
+        repo_path: Path to the local repository
+        output_dir: Directory to write results to
+        enrich: If True, run LLM enrichment (slower, costs API calls).
+                If False, only build the AST-based call graph (fast).
+
+    Produces in output_dir:
+      call_graph.json    - all functions with type and connections
+      start_points.json  - functions with out-degree only (not called by anyone)
+      end_points.json    - functions with in-degree only (call nobody)
+      orphans.json       - functions with no connections at all
+
+    Returns the output directory path.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return await _analyze_repo_impl(repo_path, output_dir, enrich=enrich)
+
+
+async def _analyze_repo_impl(
+    repo_path: Path,
+    result_dir: Path,
+    enrich: bool = True,
+) -> Path:
+    """Shared implementation for repo analysis."""
+    # Step 1: Build the AST call graph
     print("Building call graph ...")
-    call_graph, start_points, end_points, orphans = build_call_graph(repo_dir)
+    call_graph, start_points, end_points, orphans = build_call_graph(repo_path)
 
-    # Step 3: Enrich call graph with full tree builder
-    print("Enriching call graph with full tree builder ...")
-    call_graph = await build_full_graph(
-        call_graph, str(repo_dir), output_dir=result_dir
-    )
+    # Step 2: Optionally enrich call graph with full tree builder
+    if enrich:
+        print("Enriching call graph with full tree builder ...")
+        call_graph = await build_full_graph(
+            call_graph, str(repo_path), output_dir=result_dir
+        )
 
-    # Step 4: Save results (strip source code from nodes to keep output clean)
+    # Step 3: Save results (strip source code from nodes to keep output clean)
     for node in call_graph["nodes"]:
         node.pop("source", None)
     call_graph_file = result_dir / "call_graph.json"
@@ -75,7 +111,7 @@ async def analyze_repo(
     orphans_file.write_text(json.dumps(orphans, indent=2))
     print(f"  Orphans:       {orphans_file} ({len(orphans)} functions)")
 
-    # Step 5: Generate mermaid diagrams
+    # Step 4: Generate mermaid diagrams
     print("Generating mermaid diagrams ...")
     diagrams = build_diagrams(call_graph, start_points)
 
@@ -88,7 +124,7 @@ async def analyze_repo(
         sub_file.write_text(sub_content)
         print(f"  Sub-diagram:   {sub_file}")
 
-    # Step 6: Generate viewer bundle and HTML
+    # Step 5: Generate viewer bundle and HTML
     from noodles.viewer.data_loader import write_viewer_files
     write_viewer_files(result_dir)
 
