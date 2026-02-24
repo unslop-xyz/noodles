@@ -16,15 +16,36 @@ Noodles creates interactive diagrams that visualize how your code actually works
 - **Repo analyzer** - Analyze an entire repository
 - **PR analyzer** - Analyze a GitHub PR to see what changed
 
-## Setup
+## Installation
 
 ```bash
-uv sync
-cp .env.example .env
-# Edit .env and add your API key
+pip install git+https://github.com/unslop-xyz/noodles.git
 ```
 
-Supported LLM providers: `anthropic` (default), `openai`, `gemini`, `groq`, `huggingface`. Set `LLM_PROVIDER` in your `.env` file to switch providers. See `.env.example` for configuration options.
+Or for development:
+
+```bash
+git clone https://github.com/unslop-xyz/noodles.git
+cd noodles
+pip install -e .
+```
+
+## Configuration
+
+Set your LLM API key as an environment variable:
+
+```bash
+export ANTHROPIC_API_KEY=your-key-here
+```
+
+Supported providers: `anthropic` (default), `openai`, `gemini`, `groq`, `huggingface`. To use a different provider:
+
+```bash
+export LLM_PROVIDER=openai
+export OPENAI_API_KEY=your-key-here
+```
+
+Alternatively, create a `.env` file in your working directory (see `.env.example` if you cloned the repo).
 
 An API key enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
 
@@ -33,18 +54,25 @@ An API key enables AI-powered enrichment of node descriptions and edge labels. W
 ### Analyze a repository
 
 ```bash
-python src/agents/repo_analyzer/repo_analyzer.py <repo-url>
+noodles repo <repo-url>
 ```
 
 ### Analyze a PR
 
 ```bash
-python src/agents/pr_analyzer/pr_analyzer.py <github-pr-url>
+noodles pr <github-pr-url>
 ```
 
-Options: `--output-dir <dir>`, `--no-view`
+### Open viewer for existing results
 
-Results saved to `src/agents/*/result_<id>/`.
+```bash
+noodles viewer <result-dir>
+```
+
+### Options
+
+- `--output-dir <dir>` - Custom output directory for results
+- `--no-view` - Don't open the viewer after analysis
 
 ### Viewer controls
 
@@ -52,8 +80,6 @@ Results saved to `src/agents/*/result_<id>/`.
 - **Zoom** - Scroll wheel
 - **Drill down** - Click `[+]` nodes
 - **Back** - Escape
-
-> **Note**: Previous code archived under `src/archive/`
 
 ## Supported languages
 
