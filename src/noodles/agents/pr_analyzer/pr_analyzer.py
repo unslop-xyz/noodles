@@ -113,6 +113,14 @@ async def analyze_pr(
         sub_file.write_text(sub_content)
         print(f"  Sub-diagram:   {sub_file}")
 
+    # Step 6: Generate viewer bundle for the website
+    print("Generating viewer bundle ...")
+    from noodles.viewer.data_loader import load_result
+    viewer_bundle = load_result(result_dir)
+    viewer_bundle_file = result_dir / "viewer_bundle.json"
+    viewer_bundle_file.write_text(json.dumps(viewer_bundle))
+    print(f"  Viewer bundle: {viewer_bundle_file}")
+
     return result_dir
 
 
