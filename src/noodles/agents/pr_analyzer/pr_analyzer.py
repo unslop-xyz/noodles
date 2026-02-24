@@ -185,11 +185,10 @@ def _clone_and_setup(
     """
     repo_dir = result_dir / "repo"
     base_dir = result_dir / "base"
-    repo_url = f"https://github.com/{owner}/{repo}"
 
-    # Clone the repository
-    print(f"  Cloning {repo_url} ...")
-    if not _run_git(["git", "clone", repo_url, str(repo_dir)], timeout=300):
+    # Clone the repository (using gh for private repo support)
+    print(f"  Cloning {owner}/{repo} ...")
+    if not _run_git(["gh", "repo", "clone", f"{owner}/{repo}", str(repo_dir)], timeout=300):
         return None
 
     # Fetch the PR head ref

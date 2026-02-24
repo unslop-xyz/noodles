@@ -95,20 +95,20 @@ def _clone_repo(repo_url: str, dest: Path) -> bool:
     """Clone a git repository to dest. Returns True on success."""
     try:
         result = subprocess.run(
-            ["git", "clone", repo_url, str(dest)],
+            ["gh", "repo", "clone", repo_url, str(dest)],
             capture_output=True,
             text=True,
             timeout=300,
         )
     except FileNotFoundError:
-        print("Error: 'git' not found.", file=sys.stderr)
+        print("Error: 'gh' not found. Install GitHub CLI: https://cli.github.com/", file=sys.stderr)
         return False
     except subprocess.TimeoutExpired:
         print("Error: git clone timed out.", file=sys.stderr)
         return False
 
     if result.returncode != 0:
-        print(f"Error: git clone failed:\n{result.stderr}", file=sys.stderr)
+        print(f"Error: gh repo clone failed:\n{result.stderr}", file=sys.stderr)
         return False
 
     return True
