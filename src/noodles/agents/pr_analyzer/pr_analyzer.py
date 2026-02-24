@@ -52,7 +52,42 @@ async def analyze_pr(
         return None
     base_path, head_path = setup
 
-    # Step 2: Build PR call graph (tree-sitter compares base vs head)
+    # Use shared implementation
+    return await _analyze_changes_impl(base_path, head_path, result_dir)
+
+
+async def analyze_local_changes(
+    base_path: Path,
+    head_path: Path,
+    output_dir: Path,
+) -> Path:
+    """Analyze changes between two local paths (no cloning needed).
+
+    Args:
+        base_path: Path to the base version of the repository
+        head_path: Path to the head version of the repository
+        output_dir: Directory to write results to
+
+    Produces in output_dir:
+      call_graph.json     - pruned call graph with change status
+      classification.json - functions classified as new/updated/deleted
+      start_points.json   - functions with out-degree only
+      end_points.json     - functions with in-degree only
+      orphans.json        - functions with no connections
+
+    Returns the output directory path.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return await _analyze_changes_impl(base_path, head_path, output_dir)
+
+
+async def _analyze_changes_impl(
+    base_path: Path,
+    head_path: Path,
+    result_dir: Path,
+) -> Path:
+    """Shared implementation for change analysis."""
+    # Step 1: Build PR call graph (tree-sitter compares base vs head)
     print("Building PR call graph ...")
     (
         call_graph,
@@ -62,13 +97,13 @@ async def analyze_pr(
         classification,
     ) = build_pr_call_graph(base_path, head_path)
 
-    # Step 3: Enrich call graph with full tree builder
+    # Step 2: Enrich call graph with full tree builder
     print("Enriching call graph with full tree builder ...")
     call_graph = await build_full_graph(
         call_graph, str(head_path), output_dir=result_dir
     )
 
-    # Step 4: Save results (strip source code from nodes to keep output clean)
+    # Step 3: Save results (strip source code from nodes to keep output clean)
     for node in call_graph["nodes"]:
         node.pop("source", None)
         node.pop("base_source", None)
@@ -101,7 +136,7 @@ async def analyze_pr(
     )
     print(f"  Classification: {classification_file}")
 
-    # Step 5: Generate mermaid diagrams
+    # Step 4: Generate mermaid diagrams
     print("Generating mermaid diagrams ...")
     diagrams = build_diagrams(call_graph, start_points)
 
@@ -114,7 +149,7 @@ async def analyze_pr(
         sub_file.write_text(sub_content)
         print(f"  Sub-diagram:   {sub_file}")
 
-    # Step 6: Generate viewer bundle and HTML
+    # Step 5: Generate viewer bundle and HTML
     from noodles.viewer.data_loader import write_viewer_files
     write_viewer_files(result_dir)
 
