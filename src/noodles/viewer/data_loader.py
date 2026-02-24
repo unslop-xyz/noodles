@@ -174,9 +174,13 @@ def generate_viewer_html(result_dir: str | Path) -> str:
       loading.textContent = 'Failed to load data: ' + err.message;
     });"""
 
+    # Use setTimeout to defer execution until after all variables are declared
+    # (the original fetch was async so this wasn't needed)
     inline_code = f"""DATA = {json.dumps(bundle)};
-  loading.style.display = 'none';
-  navigateTo('main', 'Main');"""
+  setTimeout(() => {{
+    loading.style.display = 'none';
+    navigateTo('main', 'Main');
+  }}, 0);"""
 
     html = template.replace(fetch_block, inline_code)
     return html
