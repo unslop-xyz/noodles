@@ -194,6 +194,8 @@ def _find_base_commit(
 
     if merge_commit_sha:
         # Merged PR: first parent of merge commit = base before merge
+        # Fetch the merge commit first (it may not exist locally after clone)
+        _run_git(["git", "fetch", "origin", merge_commit_sha], cwd=repo_dir)
         base = _git_output(
             ["git", "rev-parse", f"{merge_commit_sha}^1"], cwd=repo_dir
         )
