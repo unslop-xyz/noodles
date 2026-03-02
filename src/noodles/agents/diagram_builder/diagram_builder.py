@@ -397,10 +397,47 @@ def _unique_sub_name(
 # Mermaid formatting
 # ---------------------------------------------------------------------------
 
+def _make_short_label(node_id: str) -> str:
+    """Convert full node ID to short readable format for labels.
+
+    'src/noodles/mcp/server.py::analyze_pr' -> 'mcp/server:analyze_pr'
+    """
+    if "::" not in node_id:
+        return node_id
+
+    file_part, func_part = node_id.rsplit("::", 1)
+
+    # Remove leading src/ and file extension
+    path = file_part
+    if path.startswith("src/"):
+        path = path[4:]
+
+    # Remove common prefix paths and extension
+    parts = path.split("/")
+    if len(parts) > 2:
+        # Keep last 2 path components (module/file)
+        parts = parts[-2:]
+
+    # Remove extension from last part
+    if parts:
+        last = parts[-1]
+        for ext in (".py", ".js", ".ts", ".tsx", ".jsx"):
+            if last.endswith(ext):
+                parts[-1] = last[: -len(ext)]
+                break
+
+    short_path = "/".join(parts)
+    return f"{short_path}:{func_part}"
+
+
 def _mermaid_node(node: dict, has_sub: bool = False) -> str:
     """Format a single node as a mermaid node definition line."""
     mid = _sanitize_id(node["id"])
-    label = _sanitize_text(node.get("name") or node["id"].split("::")[-1])
+    # Use enriched name if available, otherwise create short readable label
+    if node.get("name"):
+        label = _sanitize_text(node["name"])
+    else:
+        label = _sanitize_text(_make_short_label(node["id"]))
     if has_sub:
         label += " [+]"
     shape = SHAPE_BY_TYPE.get(node.get("type", "process"), '["{}"]')

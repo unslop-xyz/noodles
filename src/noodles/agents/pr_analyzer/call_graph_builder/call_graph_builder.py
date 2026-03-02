@@ -240,6 +240,7 @@ def _prune_graph(
             "id": nid,
             "type": node["type"],  # will be reclassified below
             "status": status,
+            "line": node.get("line"),
             "callers": [c for c in node.get("callers", []) if c in retained],
             "callees": [c for c in node.get("callees", []) if c in retained],
             "source": node.get("source", ""),
