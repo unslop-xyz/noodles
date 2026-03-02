@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "noodles"
-version = "0.3.1"
+version = "0.4.0"
 description = "AI-powered code visualization and call graph analysis"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,6 +33,9 @@ dev = [
   "pytest>=8.1.0",
   "pytest-asyncio>=0.23.0",
 ]
+mcp = [
+  "mcp>=1.0.0,<2",
+]
 
 [project.urls]
 Homepage = "https://github.com/unslop-xyz/noodles"
@@ -40,6 +43,7 @@ Issues = "https://github.com/unslop-xyz/noodles/issues"
 
 [project.scripts]
 noodles = "noodles.cli:main"
+noodles-mcp = "noodles.mcp:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/noodles"]

@@ -76,6 +76,44 @@ noodles viewer <result-dir>
 - `--output-dir <dir>` - Custom output directory for results
 - `--no-view` - Don't open the viewer after analysis
 
+## MCP Server (Claude Code Integration)
+
+Noodles can run as an MCP server, allowing Claude Code to analyze PRs and repositories directly.
+
+### Setup
+
+1. Install with MCP dependencies:
+   ```bash
+   pip install "noodles[mcp]"
+   ```
+
+2. Add to your Claude Code settings (`~/.claude.json`):
+   ```json
+   {
+     "mcpServers": {
+       "noodles": {
+         "type": "stdio",
+         "command": "noodles-mcp"
+       }
+     }
+   }
+   ```
+
+3. Restart Claude Code
+
+4. Verify with `/mcp` - you should see the noodles server listed
+
+### Available Tools
+
+Once configured, Claude Code can use these tools:
+
+- `analyze_pr` - Analyze a GitHub PR
+- `analyze_repo` - Analyze an entire repository
+- `analyze_local_repo` - Analyze a local repository (no cloning)
+- `analyze_changes` - Analyze uncommitted local changes
+- `get_diagram` - Get Mermaid diagram from analysis
+- `get_call_graph` - Get full call graph JSON
+
 ### Viewer controls
 
 - **Pan** - Click and drag

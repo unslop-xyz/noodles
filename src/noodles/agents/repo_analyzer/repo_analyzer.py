@@ -23,8 +23,16 @@ async def analyze_repo(
     repo_url: str,
     output_dir: Path | None = None,
     analysis_id: str | None = None,
+    enrich: bool = True,
 ) -> Path | None:
     """Clone a repo and build its function call graph.
+
+    Args:
+        repo_url: GitHub repository URL to clone and analyze
+        output_dir: Directory for results (default: agent directory)
+        analysis_id: Custom ID for the result directory
+        enrich: If True, run LLM enrichment (slower, costs API calls).
+                If False, only build the AST-based call graph (fast).
 
     Produces in the result directory:
       repo/              - the cloned repository
@@ -47,7 +55,7 @@ async def analyze_repo(
         return None
 
     # Use shared implementation
-    return await _analyze_repo_impl(repo_dir, result_dir, enrich=True)
+    return await _analyze_repo_impl(repo_dir, result_dir, enrich=enrich)
 
 
 async def analyze_local_repo(

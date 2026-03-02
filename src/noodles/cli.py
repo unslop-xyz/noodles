@@ -52,6 +52,13 @@ def main():
         "--port", type=int, default=0, help="Port (0=auto)"
     )
 
+    # noodles mcp
+    subparsers.add_parser(
+        "mcp",
+        help="Run the MCP server for AI agent integration",
+        description="Start the Model Context Protocol server for AI agent integration",
+    )
+
     args = parser.parse_args()
 
     if args.command == "repo":
@@ -60,6 +67,8 @@ def main():
         _run_pr(args)
     elif args.command == "viewer":
         _run_viewer(args)
+    elif args.command == "mcp":
+        _run_mcp()
 
 
 def _run_repo(args):
@@ -122,6 +131,21 @@ def _run_viewer(args):
     except KeyboardInterrupt:
         print("\nShutting down.")
         server.shutdown()
+
+
+def _run_mcp():
+    """Run the MCP server."""
+    try:
+        from noodles.mcp import main as mcp_main
+    except ImportError:
+        print(
+            "Error: MCP dependencies not installed.\n"
+            "Install with: pip install noodles[mcp]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    mcp_main()
 
 
 if __name__ == "__main__":

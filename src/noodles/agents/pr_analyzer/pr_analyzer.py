@@ -28,8 +28,16 @@ async def analyze_pr(
     pr_url: str,
     output_dir: Path | None = None,
     analysis_id: str | None = None,
+    enrich: bool = True,
 ) -> Path | None:
     """Analyze a PR and build a pruned call graph with change status.
+
+    Args:
+        pr_url: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
+        output_dir: Directory for results (default: agent directory)
+        analysis_id: Custom ID for the result directory
+        enrich: If True, run LLM enrichment (slower, costs API calls).
+                If False, only build the AST-based call graph (fast).
 
     Returns the result directory path, or None on failure.
     """
@@ -53,13 +61,14 @@ async def analyze_pr(
     base_path, head_path = setup
 
     # Use shared implementation
-    return await _analyze_changes_impl(base_path, head_path, result_dir)
+    return await _analyze_changes_impl(base_path, head_path, result_dir, enrich=enrich)
 
 
 async def analyze_local_changes(
     base_path: Path,
     head_path: Path,
     output_dir: Path,
+    enrich: bool = True,
 ) -> Path:
     """Analyze changes between two local paths (no cloning needed).
 
@@ -67,6 +76,8 @@ async def analyze_local_changes(
         base_path: Path to the base version of the repository
         head_path: Path to the head version of the repository
         output_dir: Directory to write results to
+        enrich: If True, run LLM enrichment (slower, costs API calls).
+                If False, only build the AST-based call graph (fast).
 
     Produces in output_dir:
       call_graph.json     - pruned call graph with change status
@@ -78,13 +89,14 @@ async def analyze_local_changes(
     Returns the output directory path.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    return await _analyze_changes_impl(base_path, head_path, output_dir)
+    return await _analyze_changes_impl(base_path, head_path, output_dir, enrich=enrich)
 
 
 async def _analyze_changes_impl(
     base_path: Path,
     head_path: Path,
     result_dir: Path,
+    enrich: bool = True,
 ) -> Path:
     """Shared implementation for change analysis."""
     # Step 1: Build PR call graph (tree-sitter compares base vs head)
@@ -97,11 +109,12 @@ async def _analyze_changes_impl(
         classification,
     ) = build_pr_call_graph(base_path, head_path)
 
-    # Step 2: Enrich call graph with full tree builder
-    print("Enriching call graph with full tree builder ...")
-    call_graph = await build_full_graph(
-        call_graph, str(head_path), output_dir=result_dir
-    )
+    # Step 2: Optionally enrich call graph with full tree builder
+    if enrich:
+        print("Enriching call graph with full tree builder ...")
+        call_graph = await build_full_graph(
+            call_graph, str(head_path), output_dir=result_dir
+        )
 
     # Step 3: Save results (strip source code from nodes to keep output clean)
     for node in call_graph["nodes"]:
