@@ -240,10 +240,10 @@ def filter_by_type(call_graph: dict, filter_type: str) -> list[dict]:
 
 
 def fuzzy_match(query: str, node_ids: list[str]) -> list[str]:
-    """Match partial function names (e.g., 'analyze_pr' -> full ID).
+    """Match partial function names or short IDs (e.g., 'analyze_pr' or 'cli:main').
 
     Args:
-        query: Partial function name to search for.
+        query: Partial function name or short ID to search for.
         node_ids: List of full node IDs to search in.
 
     Returns:
@@ -251,21 +251,46 @@ def fuzzy_match(query: str, node_ids: list[str]) -> list[str]:
     """
     query_lower = query.lower()
     exact = []
+    short_id_exact = []
+    short_id_suffix = []
+    func_exact = []
     suffix = []
     contains = []
 
     for nid in node_ids:
+        nid_lower = nid.lower()
         # Extract function name (after ::)
         func_name = nid.split("::")[-1].lower()
+        # Get short_id format (e.g., "mcp/server:analyze_pr")
+        short_id = make_short_id(nid).lower()
 
-        if func_name == query_lower:
+        # Priority 1: Exact match on full ID
+        if nid_lower == query_lower:
             exact.append(nid)
+        # Priority 2: Exact match on short_id
+        elif short_id == query_lower:
+            short_id_exact.append(nid)
+        # Priority 3: Short ID ends with query (e.g., "cli:main" matches "noodles/cli:main")
+        elif short_id.endswith(query_lower):
+            short_id_suffix.append(nid)
+        # Priority 4: Exact match on function name
+        elif func_name == query_lower:
+            func_exact.append(nid)
+        # Priority 5: Function name ends with query
         elif func_name.endswith(query_lower):
             suffix.append(nid)
-        elif query_lower in func_name or query_lower in nid.lower():
+        # Priority 6: Query contained in short_id, func_name, or full ID
+        elif query_lower in short_id or query_lower in func_name or query_lower in nid_lower:
             contains.append(nid)
 
-    return sorted(exact) + sorted(suffix) + sorted(contains)
+    return (
+        sorted(exact)
+        + sorted(short_id_exact)
+        + sorted(short_id_suffix)
+        + sorted(func_exact)
+        + sorted(suffix)
+        + sorted(contains)
+    )
 
 
 def make_short_id(node_id: str) -> str:
