@@ -87,12 +87,11 @@ Noodles can run as an MCP server, allowing Claude Code to analyze PRs and reposi
    pip install "noodles[mcp]"
    ```
 
-2. Add to your Claude Code settings (`~/.claude.json`):
+2. Add to your Claude Code settings (`~/.claude/settings.json`):
    ```json
    {
      "mcpServers": {
        "noodles": {
-         "type": "stdio",
          "command": "noodles-mcp"
        }
      }
@@ -113,6 +112,12 @@ Once configured, Claude Code can use these tools:
 - `analyze_changes` - Analyze uncommitted local changes
 - `get_diagram` - Get Mermaid diagram from analysis
 - `get_call_graph` - Get full call graph JSON
+- `find_path` - Find call path between two functions
+- `get_callers` - Get functions that call a given function
+- `get_callees` - Get functions called by a given function
+- `filter_graph` - Filter nodes by type (entry_points, endpoints, new, updated, orphans)
+- `get_summary` - Get plain English summary of analysis impact
+- `get_changes` - Get detailed change info for modified functions
 
 ### Viewer controls
 
