@@ -154,7 +154,9 @@ def build_call_graph(
             orphans.append(idx)
 
         source_code = func_defs[idx][1].text.decode("utf-8") if idx in func_defs else ""
-        nodes.append({"id": idx, "type": node_type, "callers": callers, "callees": callees, "source": source_code})
+        # tree-sitter is 0-indexed, add 1 for human-readable line numbers
+        line_num = func_defs[idx][1].start_point[0] + 1 if idx in func_defs else None
+        nodes.append({"id": idx, "type": node_type, "line": line_num, "callers": callers, "callees": callees, "source": source_code})
 
         # Sort callees by their row position in the caller, then assign index
         sorted_callees = sorted(callees, key=lambda c: call_row_map.get((idx, c), 0))
