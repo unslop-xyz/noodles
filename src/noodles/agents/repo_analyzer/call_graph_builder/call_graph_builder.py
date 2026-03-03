@@ -2,6 +2,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import pathspec
+
 try:
     from tree_sitter_language_pack import get_parser as _ts_get_parser
     from tree_sitter import Node
@@ -173,7 +175,9 @@ def build_call_graph(
 
 
 def _iter_source_files(repo_path: Path):
-    """Yield all supported source files, skipping common non-source directories."""
+    """Yield all supported source files, skipping common non-source directories and gitignored files."""
+    gitignore_spec = _load_gitignore(repo_path)
+
     for file_path in repo_path.rglob("*"):
         if not file_path.is_file():
             continue
@@ -182,7 +186,24 @@ def _iter_source_files(repo_path: Path):
         # Skip non-source directories
         if any(part in SKIP_DIRS for part in file_path.parts):
             continue
+        # Skip files matched by .gitignore
+        if gitignore_spec is not None:
+            rel = str(file_path.relative_to(repo_path))
+            if gitignore_spec.match_file(rel):
+                continue
         yield file_path
+
+
+def _load_gitignore(repo_path: Path) -> pathspec.PathSpec | None:
+    """Load .gitignore patterns from the repo root, or return None if absent."""
+    gitignore_path = repo_path / ".gitignore"
+    if not gitignore_path.is_file():
+        return None
+    try:
+        text = gitignore_path.read_text(encoding="utf-8", errors="replace")
+        return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
+    except OSError:
+        return None
 
 
 def _find_functions_in_file(root: Node, lang: str) -> list[tuple[str, Node]]:

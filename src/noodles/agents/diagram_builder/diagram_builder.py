@@ -12,6 +12,7 @@ from noodles.utils import _sanitize_id
 
 MAX_NODES_PER_DIAGRAM = 20
 BRANCH_SIZE_THRESHOLD = 10
+HIGH_INDEGREE_THRESHOLD = 3
 
 SHAPE_BY_TYPE = {
     "start_point": '{{{{"{}"}}}}'  ,  # hexagon
@@ -330,6 +331,45 @@ def _collect_sub_diagram_nodes(
     return nodes
 
 
+def _split_high_indegree_end_nodes(
+    reachable: set[str],
+    edge_index: dict[str, list[dict]],
+    node_index: dict[str, dict],
+    main_nodes: set[str],
+    sub_diagram_node_sets: dict[str, set[str]],
+) -> None:
+    """Move end nodes with high indegree from main into parent sub-diagrams.
+
+    When an end_point node has more than HIGH_INDEGREE_THRESHOLD incoming
+    edges, it creates visual clutter in the main diagram.  This function
+    removes such nodes from *main_nodes* and adds them to every
+    sub-diagram that already contains at least one of their callers,
+    so each sub-diagram gets its own copy of the end node.
+    """
+    # Build caller mapping: callee -> set of unique callers
+    callers_of: dict[str, set[str]] = defaultdict(set)
+    for nid in reachable:
+        for e in edge_index.get(nid, []):
+            if e["to"] in reachable:
+                callers_of[e["to"]].add(nid)
+
+    for nid in list(main_nodes):
+        node = node_index.get(nid)
+        if not node or node.get("type") != "end_point":
+            continue
+        if len(callers_of.get(nid, set())) <= HIGH_INDEGREE_THRESHOLD:
+            continue
+
+        # Duplicate into each sub-diagram that contains a caller
+        callers = callers_of[nid]
+        for sub_nodes in sub_diagram_node_sets.values():
+            if callers & sub_nodes:
+                sub_nodes.add(nid)
+
+        # Remove from main diagram
+        main_nodes.discard(nid)
+
+
 def _build_diagrams_branch_based(
     entry_ids: list[str],
     edge_index: dict[str, list[dict]],
@@ -343,24 +383,39 @@ def _build_diagrams_branch_based(
     2. Mark nodes exceeding *threshold* as sub-diagram roots.
     3. Render main diagram (sub-roots collapsed).
     4. Render each sub-diagram (nested sub-roots collapsed).
+    5. Split high-indegree end nodes into parent sub-diagrams.
     """
     # Phase 1: bottom-up branch sizing
     _sizes, sub_roots = _compute_branch_sizes(reachable, edge_index, threshold)
 
-    # Phase 2: main diagram
+    # Phase 2: main diagram nodes
     main_nodes = _collect_main_diagram_nodes(
         entry_ids, edge_index, reachable, sub_roots,
     )
-    main = _render_flat(
-        main_nodes, edge_index, node_index, sub_roots=sub_roots & main_nodes,
-    )
 
-    # Phase 3: sub-diagrams
-    sub_diagrams: dict[str, str] = {}
+    # Phase 3: sub-diagram nodes
+    sub_diagram_node_sets: dict[str, set[str]] = {}
     for root_id in sorted(sub_roots):
         sub_nodes = _collect_sub_diagram_nodes(
             root_id, edge_index, reachable, sub_roots,
         )
+        sub_diagram_node_sets[root_id] = sub_nodes
+
+    # Phase 4: split high-indegree end nodes into parent sub-diagrams
+    _split_high_indegree_end_nodes(
+        reachable, edge_index, node_index,
+        main_nodes, sub_diagram_node_sets,
+    )
+
+    # Phase 5: render main diagram
+    main = _render_flat(
+        main_nodes, edge_index, node_index, sub_roots=sub_roots & main_nodes,
+    )
+
+    # Phase 6: render sub-diagrams
+    sub_diagrams: dict[str, str] = {}
+    for root_id in sorted(sub_roots):
+        sub_nodes = sub_diagram_node_sets[root_id]
         name = _unique_sub_name(root_id, node_index, sub_diagrams)
         nested = (sub_roots & sub_nodes) - {root_id}
         sub_diagrams[name] = _render_flat(
