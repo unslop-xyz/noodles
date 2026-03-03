@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-03
+
+### Fixed
+- External library calls (e.g., `requests.get()`) no longer incorrectly match internal methods (e.g., `APIClient.get()`)
+- Direct imported functions (e.g., `from subprocess import run`) no longer match internal functions with the same name
+
 ## [0.4.0] - 2026-03-03
 
 ### Added
