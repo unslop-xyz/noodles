@@ -51,6 +51,12 @@ Alternatively, create a `.env` file in your working directory (see `.env.example
 
 An API key enables AI-powered enrichment of node descriptions and edge labels. Without it, the call graph will still be generated but nodes and edges won't have human-readable descriptions.
 
+Noodles uses `gh` to fetch your repo/PR. To set it up, run:
+```bash
+brew install gh
+gh auth login
+```
+
 ## Usage
 
 ### Analyze a repository
