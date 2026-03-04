@@ -2,6 +2,7 @@ import asyncio
 import json
 import subprocess
 import sys
+import tempfile
 import uuid
 import webbrowser
 from pathlib import Path
@@ -44,12 +45,20 @@ async def analyze_repo(
     Returns the result directory path, or None on failure.
     """
     result_id = analysis_id or uuid.uuid4().hex[:12]
-    base_dir = output_dir or AGENT_DIR
-    result_dir = base_dir / f"result_{result_id}"
-    result_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Clone the repo
-    repo_dir = result_dir / "repo"
+    # Use temp directory to avoid path issues (e.g., site-packages on Windows)
+    temp_base = Path(tempfile.gettempdir()) / "noodles_repo"
+    temp_base.mkdir(parents=True, exist_ok=True)
+    temp_dir = temp_base / f"result_{result_id}"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Results go to output_dir if specified, otherwise temp
+    result_dir = output_dir or temp_dir
+    if output_dir:
+        result_dir.mkdir(parents=True, exist_ok=True)
+
+    # Step 1: Clone the repo (always to temp)
+    repo_dir = temp_dir / "repo"
     print(f"Cloning {repo_url} ...")
     if not _clone_repo(repo_url, repo_dir):
         return None

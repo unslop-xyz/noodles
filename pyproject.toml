@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "noodles"
-version = "0.4.1"
+version = "0.4.2"
 description = "AI-powered code visualization and call graph analysis"
 readme = "README.md"
 requires-python = ">=3.10"
