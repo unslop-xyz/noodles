@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -42,9 +43,17 @@ async def analyze_pr(
     Returns the result directory path, or None on failure.
     """
     result_id = analysis_id or uuid.uuid4().hex[:12]
-    base_dir = output_dir or AGENT_DIR
-    result_dir = base_dir / f"result_{result_id}"
-    result_dir.mkdir(parents=True, exist_ok=True)
+
+    # Use temp directory to avoid path issues (e.g., site-packages on Windows)
+    temp_base = Path(tempfile.gettempdir()) / "noodles_pr"
+    temp_base.mkdir(parents=True, exist_ok=True)
+    temp_dir = temp_base / f"result_{result_id}"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Results go to output_dir if specified, otherwise temp
+    result_dir = output_dir or temp_dir
+    if output_dir:
+        result_dir.mkdir(parents=True, exist_ok=True)
 
     # Step 1: Parse PR URL and clone repo
     print(f"Analyzing PR: {pr_url}")
@@ -55,7 +64,7 @@ async def analyze_pr(
         return None
 
     print("Cloning repository and setting up branches ...")
-    setup = _clone_and_setup(owner, repo, pr_number, result_dir)
+    setup = _clone_and_setup(owner, repo, pr_number, temp_dir)
     if setup is None:
         return None
     base_path, head_path = setup
@@ -225,7 +234,7 @@ def _clone_and_setup(
     owner: str,
     repo: str,
     pr_number: int,
-    result_dir: Path,
+    clone_dir: Path,
 ) -> tuple[Path, Path] | None:
     """Clone repo and set up base/head branches using pure git.
 
@@ -238,8 +247,8 @@ def _clone_and_setup(
 
     Returns (base_path, head_path) or None on failure.
     """
-    repo_dir = result_dir / "repo"
-    base_dir = result_dir / "base"
+    repo_dir = clone_dir / "repo"
+    base_dir = clone_dir / "base"
 
     # Clone the repository (using gh for private repo support)
     print(f"  Cloning {owner}/{repo} ...")
