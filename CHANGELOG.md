@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.2] - 2026-03-03
+## [0.4.2] - 2026-03-13
+
+### Changed
+- Add `.claude` to SKIP_DIRS for call graph analysis
 
 ### Fixed
 - Clone repos to temp directory instead of package directory to avoid empty call graphs when installed via `uv tool` on Windows (fixes #20)
