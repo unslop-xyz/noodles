@@ -20,6 +20,7 @@ except ImportError as e:
 SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv",
     "dist", "build", ".mypy_cache", ".pytest_cache", "site-packages",
+    ".claude",
 }
 
 # File extensions and their tree-sitter language modules
