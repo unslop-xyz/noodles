@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/unslop-xyz-noodles-badge.png)](https://mseep.ai/app/unslop-xyz-noodles)
+
 # Noodles
 
 ## TL;DR
