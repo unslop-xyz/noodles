@@ -68,6 +68,18 @@
 
   .crumb-sep { color: #999; margin: 0 2px; }
 
+  #diagram-picker {
+    margin-left: auto;
+    max-width: 320px;
+    font-size: 13px;
+    padding: 3px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+  }
+
   /* --- Diagram area --- */
   #diagram-area {
     flex: 1;
@@ -195,6 +207,10 @@
 <div id="breadcrumb-bar">
   <button id="back-btn" disabled>&larr; Back</button>
   <div id="breadcrumb"></div>
+  <!-- Jump to any diagram. Without this the only way in is a [+] node, so any
+       diagram not referenced from another one is unreachable — which happens
+       whenever a repo has several independent entry points. -->
+  <select id="diagram-picker" title="Jump to any diagram"></select>
 </div>
 
 <div id="diagram-area">
@@ -285,6 +301,7 @@
     .then(data => {
       DATA = data;
       loading.style.display = 'none';
+      populatePicker();
       navigateTo('main', 'Main');
     })
     .catch(err => {
@@ -294,8 +311,23 @@
   // ---- Rendering ----
   let renderCounter = 0;
 
+  // Diagram picker: lists every diagram, biggest first (the biggest is almost
+  // always the one worth looking at). Kept in sync with whatever is on screen.
+  const picker = document.getElementById('diagram-picker');
+  function populatePicker() {
+    const names = Object.keys(DATA.diagrams).sort(
+      (a, b) => (DATA.diagrams[b] || '').length - (DATA.diagrams[a] || '').length
+    );
+    picker.innerHTML = names.map((n) => {
+      const lines = ((DATA.diagrams[n] || '').match(/\n/g) || []).length;
+      return '<option value="' + n + '">' + n + '  (' + lines + ')</option>';
+    }).join('');
+  }
+  picker.addEventListener('change', () => renderDiagram(picker.value));
+
   async function renderDiagram(name) {
     currentDiagram = name;
+    if (picker.value !== name) picker.value = name;
     const source = DATA.diagrams[name];
     if (!source) {
       container.innerHTML = '<p style="padding:40px;color:#f66">Diagram not found: ' + name + '</p>';
