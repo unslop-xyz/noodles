@@ -314,12 +314,15 @@
   // always the one worth looking at). Kept in sync with whatever is on screen.
   const picker = document.getElementById('diagram-picker');
   function populatePicker() {
-    const names = Object.keys(DATA.diagrams).sort(
-      (a, b) => (DATA.diagrams[b] || '').length - (DATA.diagrams[a] || '').length
-    );
+    const countNodes = (n) =>
+      ((DATA.diagrams[n] || '').match(/^ {4}\w+[[({]/gm) || []).length;
+    const names = Object.keys(DATA.diagrams).sort((a, b) => countNodes(b) - countNodes(a));
     picker.innerHTML = names.map((n) => {
-      const lines = ((DATA.diagrams[n] || '').match(/\n/g) || []).length;
-      return '<option value="' + n + '">' + n + '  (' + lines + ')</option>';
+      // Node count, not source lines: the mermaid source also carries classDef
+      // headers and one line per edge, so line count is much larger than what
+      // you actually see and reads as noise.
+      const nodes = ((DATA.diagrams[n] || '').match(/^ {4}\w+[[({]/gm) || []).length;
+      return '<option value="' + n + '">' + n + ' — ' + nodes + ' nodos</option>';
     }).join('');
   }
   picker.addEventListener('change', () => renderDiagram(picker.value));
