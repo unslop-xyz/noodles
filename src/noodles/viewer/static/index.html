@@ -301,7 +301,6 @@
     .then(data => {
       DATA = data;
       loading.style.display = 'none';
-      populatePicker();
       navigateTo('main', 'Main');
     })
     .catch(err => {
@@ -327,6 +326,9 @@
 
   async function renderDiagram(name) {
     currentDiagram = name;
+    // Poblado perezoso: el viewer standalone incrusta DATA por sustitución
+    // literal del bloque fetch, así que no se puede inicializar desde ahí.
+    if (!picker.options.length && DATA) populatePicker();
     if (picker.value !== name) picker.value = name;
     const source = DATA.diagrams[name];
     if (!source) {
