@@ -2,6 +2,7 @@
 
 import re
 from collections import defaultdict
+from pathlib import Path
 
 from noodles.utils import _sanitize_id
 
@@ -436,10 +437,18 @@ def _unique_sub_name(
 ) -> str:
     """Generate a unique filename-safe name for a sub-diagram."""
     node = node_index.get(root_id)
-    if node and node.get("name"):
+    qualified = root_id.split("::")[-1]
+
+    # Module-scope roots are all called "<module>", so naming them by the bare
+    # symbol produces module, module_2, module_3 … and the user cannot tell which
+    # script each diagram belongs to. Name them after the FILE instead:
+    # scripts/run_amvrosiadis2018.py::<module> -> run_amvrosiadis2018.
+    if qualified == "<module>":
+        base = _sanitize_id(Path(root_id.split("::")[0]).stem)
+    elif node and node.get("name"):
         base = _sanitize_id(node["name"])
     else:
-        base = _sanitize_id(root_id.split("::")[-1])
+        base = _sanitize_id(qualified)
     if base not in existing:
         return base
     i = 2

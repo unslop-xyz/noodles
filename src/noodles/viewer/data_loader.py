@@ -182,5 +182,17 @@ def generate_viewer_html(result_dir: str | Path) -> str:
     navigateTo('main', 'Main');
   }}, 0);"""
 
+    if fetch_block not in template:
+        # The substitution is a literal string match against the template, so any
+        # edit inside that block silently produces a viewer that still calls
+        # fetch('/api/data') — which fails with "Failed to fetch" when the file is
+        # opened directly. Fail loudly instead of shipping a broken viewer.
+        raise RuntimeError(
+            "generate_viewer_html: the fetch block was not found in "
+            f"{template_path}. The standalone viewer would be generated without "
+            "embedded data and would not work offline. Keep the fetch block in "
+            "the template byte-identical to fetch_block in this file."
+        )
+
     html = template.replace(fetch_block, inline_code)
     return html

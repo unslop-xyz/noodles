@@ -68,6 +68,18 @@
 
   .crumb-sep { color: #999; margin: 0 2px; }
 
+  #diagram-picker {
+    margin-left: auto;
+    max-width: 320px;
+    font-size: 13px;
+    padding: 3px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+  }
+
   /* --- Diagram area --- */
   #diagram-area {
     flex: 1;
@@ -195,6 +207,10 @@
 <div id="breadcrumb-bar">
   <button id="back-btn" disabled>&larr; Back</button>
   <div id="breadcrumb"></div>
+  <!-- Jump to any diagram. Without this the only way in is a [+] node, so any
+       diagram not referenced from another one is unreachable — which happens
+       whenever a repo has several independent entry points. -->
+  <select id="diagram-picker" title="Jump to any diagram"></select>
 </div>
 
 <div id="diagram-area">
@@ -294,8 +310,29 @@
   // ---- Rendering ----
   let renderCounter = 0;
 
+  // Diagram picker: lists every diagram, biggest first (the biggest is almost
+  // always the one worth looking at). Kept in sync with whatever is on screen.
+  const picker = document.getElementById('diagram-picker');
+  function populatePicker() {
+    const countNodes = (n) =>
+      ((DATA.diagrams[n] || '').match(/^ {4}\w+[[({]/gm) || []).length;
+    const names = Object.keys(DATA.diagrams).sort((a, b) => countNodes(b) - countNodes(a));
+    picker.innerHTML = names.map((n) => {
+      // Node count, not source lines: the mermaid source also carries classDef
+      // headers and one line per edge, so line count is much larger than what
+      // you actually see and reads as noise.
+      const nodes = ((DATA.diagrams[n] || '').match(/^ {4}\w+[[({]/gm) || []).length;
+      return '<option value="' + n + '">' + n + ' — ' + nodes + ' nodos</option>';
+    }).join('');
+  }
+  picker.addEventListener('change', () => renderDiagram(picker.value));
+
   async function renderDiagram(name) {
     currentDiagram = name;
+    // Poblado perezoso: el viewer standalone incrusta DATA por sustitución
+    // literal del bloque fetch, así que no se puede inicializar desde ahí.
+    if (!picker.options.length && DATA) populatePicker();
+    if (picker.value !== name) picker.value = name;
     const source = DATA.diagrams[name];
     if (!source) {
       container.innerHTML = '<p style="padding:40px;color:#f66">Diagram not found: ' + name + '</p>';
