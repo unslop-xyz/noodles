@@ -3,6 +3,8 @@
 import asyncio
 import sys
 from collections import defaultdict
+
+from .docstring_enricher import enrich_from_docstrings
 from pathlib import Path
 
 from noodles.agents.node_builder import run_node_builder_for_file
@@ -51,6 +53,14 @@ async def build_full_graph(
     if not nodes and not edges:
         print("  Nothing to process.")
         return call_graph
+
+    # Floor: fill names/descriptions from the code's own docstrings before any
+    # LLM runs. Offline, free, and often better than a generated summary. The
+    # LLM step below only overwrites what it manages to describe, so this is
+    # what keeps the graph readable when there is no API key at all.
+    filled = enrich_from_docstrings(nodes, repo_path)
+    if filled:
+        print(f"  Descriptions from docstrings: {filled}/{len(nodes)} nodes")
 
     # -- Phase 1: Node builders (batched by file, max 10 concurrent) --------
     nodes_by_file: dict[str, list[dict]] = defaultdict(list)
