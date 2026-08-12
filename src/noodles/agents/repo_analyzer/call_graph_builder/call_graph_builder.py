@@ -68,6 +68,10 @@ def build_call_graph(
     name_to_indices: dict[str, list[str]] = defaultdict(list)
     # Maps rel_path -> dict of imports (local_name -> source_module)
     file_imports: dict[str, dict[str, str]] = {}
+    # Top-level module names that live inside the repo (e.g. "modules" for
+    # modules/acf.py, "main" for main.py). Used to tell an internal import
+    # apart from an external package — see the skip condition in Phase 2.
+    internal_modules: set[str] = set()
 
     for file_path in _iter_source_files(repo_path):
         lang = EXTENSION_TO_LANG[file_path.suffix]
@@ -84,6 +88,11 @@ def build_call_graph(
         tree = parser.parse(source)
         rel_path = str(file_path.relative_to(repo_path))
 
+        # Record this file's top-level component as an internal module name.
+        # modules/acf.py -> "modules"; main.py -> "main".
+        parts = Path(rel_path).parts
+        internal_modules.add(parts[0] if len(parts) > 1 else Path(parts[0]).stem)
+
         # Collect imports for this file
         file_imports[rel_path] = _collect_file_imports(tree.root_node, lang)
 
@@ -97,6 +106,18 @@ def build_call_graph(
             # Register by bare name (last component) for call resolution
             bare_name = qualified_name.split(".")[-1]
             name_to_indices[bare_name].append(index)
+
+        # Register module scope as a pseudo-function when the file does real
+        # work at top level. Scripts (main.py, run_*.py, notebooks-turned-.py)
+        # run most of their pipeline outside any function, and those calls were
+        # invisible: the graph only walked function bodies. That made the very
+        # files that orchestrate everything look empty, and left the helpers
+        # they call stranded as false "orphans".
+        #
+        # It is NOT added to name_to_indices: a module is a caller, never a
+        # callee, so nothing should be able to resolve a call to it.
+        if _get_direct_calls(tree.root_node, lang):
+            func_defs[f"{rel_path}::<module>"] = (file_path, tree.root_node)
 
     # Phase 2: Build call graph
     call_graph_map: dict[str, list[str]] = {}
@@ -115,8 +136,19 @@ def build_call_graph(
             # Skip calls to external libraries (e.g., requests.get() should not match internal get())
             if _is_external_receiver(receiver, imports, lang):
                 continue
-            # Skip direct calls to imported functions (e.g., from subprocess import run; run())
-            if _is_imported_function(call_name, receiver, imports):
+            # Skip direct calls to functions imported from EXTERNAL packages
+            # (e.g., from subprocess import run; run()).
+            #
+            # Imports from modules that live inside the repo are internal calls
+            # and MUST produce an edge. Skipping them unconditionally dropped a
+            # large share of the graph in codebases that use absolute internal
+            # imports (`from modules.acf import make_mask_randoms`) — the very
+            # style the stdlib-style guard was never meant to catch. Relative
+            # imports were already treated as internal in _collect_file_imports;
+            # this closes the same gap for the absolute form.
+            if _is_imported_function(call_name, receiver, imports) and not _is_internal_import(
+                imports.get(call_name), internal_modules
+            ):
                 continue
             if call_name not in name_to_indices:
                 continue
@@ -633,6 +665,32 @@ def _is_external_receiver(receiver: str | None, imports: dict[str, str], lang: s
     root_name = receiver.split(".")[0]
 
     return root_name in imports
+
+
+def _is_internal_import(source_module: str | None, internal_modules: set[str]) -> bool:
+    """Check if an import resolves to a module inside the analyzed repository.
+
+    `imports` maps a local name to its ROOT source module, so `from modules.acf
+    import make_mask_randoms` yields "modules". If that root matches a top-level
+    directory (or module file) of the repo, the call is internal and its edge
+    must be kept.
+
+    Args:
+        source_module: Root module the name was imported from, or None.
+        internal_modules: Top-level module names found in the repo.
+
+    Returns:
+        True if the import points at repo-local source.
+
+    Examples:
+        - source_module="modules", internal_modules={"modules", "scripts"} → True
+        - source_module="subprocess", internal_modules={"modules"} → False
+        - source_module=None → False
+    """
+    if source_module is None:
+        return False
+
+    return source_module.split(".")[0] in internal_modules
 
 
 def _is_imported_function(call_name: str, receiver: str | None, imports: dict[str, str]) -> bool:
