@@ -120,7 +120,9 @@ def build_call_graph(
                 continue
             if call_name not in name_to_indices:
                 continue
-            candidates = name_to_indices[call_name]
+            candidates = _narrow_by_receiver(
+                name_to_indices[call_name], receiver, index
+            )
             # Prefer same-file functions, otherwise include all candidates
             same_file = [c for c in candidates if c.startswith(f"{rel_path}::")]
             matched = same_file if same_file else candidates
@@ -185,6 +187,35 @@ def build_call_graph(
 
     call_graph = {"nodes": nodes, "edges": edges}
     return call_graph, start_points, end_points, orphans
+
+
+SELF_RECEIVERS = {"self", "cls", "this", "Self"}
+
+
+def _owner(index: str) -> str:
+    """Class/type part of a function index: "a.py::Foo.bar" → "Foo", "a.py::bar" → ""."""
+    qualified = index.split("::", 1)[-1]
+    return qualified.rpartition(".")[0]
+
+
+def _narrow_by_receiver(
+    candidates: list[str], receiver: str | None, caller: str
+) -> list[str]:
+    """Narrow name-matched candidates using the call's receiver, when it is informative.
+
+    - self.foo() / this.foo() → methods of the caller's own class
+    - Foo.bar() where Foo is a class in the repo → Foo's methods
+    Otherwise (or if narrowing leaves nothing) the candidates are returned unchanged.
+    """
+    if receiver is None:
+        return candidates
+    if receiver in SELF_RECEIVERS:
+        caller_owner = _owner(caller)
+        narrowed = [c for c in candidates if caller_owner and _owner(c) == caller_owner]
+    else:
+        type_name = receiver.split(".")[-1]
+        narrowed = [c for c in candidates if _owner(c).split(".")[-1] == type_name]
+    return narrowed or candidates
 
 
 def _iter_source_files(repo_path: Path):
