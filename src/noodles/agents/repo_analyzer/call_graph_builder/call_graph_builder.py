@@ -1,3 +1,4 @@
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -20,7 +21,7 @@ except ImportError as e:
 SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv",
     "dist", "build", ".mypy_cache", ".pytest_cache", "site-packages",
-    ".claude",
+    ".claude", "vendor", "target", "obj",
 }
 
 # File extensions and their tree-sitter language modules
@@ -30,6 +31,60 @@ EXTENSION_TO_LANG = {
     ".jsx": "javascript",
     ".ts": "typescript",
     ".tsx": "tsx",
+    ".go": "go",
+    ".java": "java",
+    ".rs": "rust",
+    ".cs": "csharp",
+}
+
+JS_LANGS = ("javascript", "typescript", "tsx")
+
+# AST node types for languages handled by the spec-driven walker.
+#   containers:  type-like nodes whose name qualifies the functions inside them
+#   functions:   named function/method definitions
+#   nested:      anonymous function scopes (calls inside are not attributed to the parent)
+#   calls:       call-like nodes (including constructor calls via `new`)
+#   instance:    receivers that refer to the current object/module, never external
+LANG_SPECS = {
+    "go": {
+        "containers": set(),
+        "functions": {"function_declaration", "method_declaration"},
+        "nested": {"func_literal"},
+        "calls": {"call_expression"},
+        "instance": set(),
+    },
+    "java": {
+        "containers": {
+            "class_declaration", "interface_declaration", "enum_declaration",
+            "record_declaration",
+        },
+        "functions": {
+            "method_declaration", "constructor_declaration",
+            "compact_constructor_declaration",
+        },
+        "nested": {"lambda_expression"},
+        "calls": {"method_invocation", "object_creation_expression"},
+        "instance": {"this", "super"},
+    },
+    "rust": {
+        "containers": {"impl_item", "trait_item"},
+        "functions": {"function_item"},
+        "nested": {"closure_expression"},
+        "calls": {"call_expression"},
+        "instance": {"self", "Self", "super", "crate"},
+    },
+    "csharp": {
+        "containers": {
+            "class_declaration", "struct_declaration", "interface_declaration",
+            "record_declaration", "enum_declaration",
+        },
+        "functions": {
+            "method_declaration", "constructor_declaration", "local_function_statement",
+        },
+        "nested": {"lambda_expression", "anonymous_method_expression"},
+        "calls": {"invocation_expression", "object_creation_expression"},
+        "instance": {"this", "base"},
+    },
 }
 
 
@@ -68,6 +123,10 @@ def build_call_graph(
     name_to_indices: dict[str, list[str]] = defaultdict(list)
     # Maps rel_path -> dict of imports (local_name -> source_module)
     file_imports: dict[str, dict[str, str]] = {}
+    # Maps rel_path -> language, used to filter out imports of the repo's own code
+    file_langs: dict[str, str] = {}
+    # Java packages / C# namespaces declared in the repo
+    declared_packages: set[str] = set()
 
     for file_path in _iter_source_files(repo_path):
         lang = EXTENSION_TO_LANG[file_path.suffix]
@@ -86,6 +145,9 @@ def build_call_graph(
 
         # Collect imports for this file
         file_imports[rel_path] = _collect_file_imports(tree.root_node, lang)
+        file_langs[rel_path] = lang
+        if lang in ("java", "csharp"):
+            declared_packages.update(_collect_declared_packages(tree.root_node))
 
         funcs = _find_functions_in_file(tree.root_node, lang)
         for qualified_name, func_node in funcs:
@@ -97,6 +159,15 @@ def build_call_graph(
             # Register by bare name (last component) for call resolution
             bare_name = qualified_name.split(".")[-1]
             name_to_indices[bare_name].append(index)
+
+    # Imports that resolve to the repo's own code are internal, not external libraries
+    internal_modules = _find_internal_modules(repo_path, declared_packages)
+    for rel_path, imports in file_imports.items():
+        lang = file_langs[rel_path]
+        file_imports[rel_path] = {
+            name: src for name, src in imports.items()
+            if not _is_internal_import(src, lang, internal_modules)
+        }
 
     # Phase 2: Build call graph
     call_graph_map: dict[str, list[str]] = {}
@@ -120,7 +191,9 @@ def build_call_graph(
                 continue
             if call_name not in name_to_indices:
                 continue
-            candidates = name_to_indices[call_name]
+            candidates = _narrow_by_receiver(
+                name_to_indices[call_name], receiver, index
+            )
             # Prefer same-file functions, otherwise include all candidates
             same_file = [c for c in candidates if c.startswith(f"{rel_path}::")]
             matched = same_file if same_file else candidates
@@ -187,6 +260,35 @@ def build_call_graph(
     return call_graph, start_points, end_points, orphans
 
 
+SELF_RECEIVERS = {"self", "cls", "this", "Self"}
+
+
+def _owner(index: str) -> str:
+    """Class/type part of a function index: "a.py::Foo.bar" → "Foo", "a.py::bar" → ""."""
+    qualified = index.split("::", 1)[-1]
+    return qualified.rpartition(".")[0]
+
+
+def _narrow_by_receiver(
+    candidates: list[str], receiver: str | None, caller: str
+) -> list[str]:
+    """Narrow name-matched candidates using the call's receiver, when it is informative.
+
+    - self.foo() / this.foo() / Self::foo() → methods of the caller's own class
+    - Foo.bar() / Foo::bar() where Foo is a class in the repo → Foo's methods
+    Otherwise (or if narrowing leaves nothing) the candidates are returned unchanged.
+    """
+    if receiver is None:
+        return candidates
+    if receiver in SELF_RECEIVERS:
+        caller_owner = _owner(caller)
+        narrowed = [c for c in candidates if caller_owner and _owner(c) == caller_owner]
+    else:
+        type_name = receiver.split(".")[-1]
+        narrowed = [c for c in candidates if _owner(c).split(".")[-1] == type_name]
+    return narrowed or candidates
+
+
 def _iter_source_files(repo_path: Path):
     """Yield all supported source files, skipping common non-source directories and gitignored files."""
     gitignore_spec = _load_gitignore(repo_path)
@@ -217,6 +319,88 @@ def _load_gitignore(repo_path: Path) -> pathspec.PathSpec | None:
         return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
     except OSError:
         return None
+
+
+def _find_internal_modules(repo_path: Path, declared_packages: set[str]) -> dict[str, set[str]]:
+    """Find module names that belong to the repo itself, per language.
+
+    - python: top-level packages/modules at the repo root or under src/
+    - go:     module paths from go.mod files
+    - rust:   crate names from Cargo.toml files
+    - java/csharp: packages/namespaces declared in the repo's source files
+    """
+    internal: dict[str, set[str]] = {
+        "python": set(), "go": set(), "rust": set(),
+        "java": set(declared_packages), "csharp": set(declared_packages),
+    }
+
+    for base in (repo_path, repo_path / "src"):
+        if not base.is_dir():
+            continue
+        for child in base.iterdir():
+            if child.is_dir() and (child / "__init__.py").is_file():
+                internal["python"].add(child.name)
+            elif child.is_file() and child.suffix == ".py":
+                internal["python"].add(child.stem)
+
+    for manifest in _iter_manifests(repo_path, ("go.mod", "Cargo.toml")):
+        try:
+            text = manifest.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if manifest.name == "go.mod":
+            match = re.search(r"^module\s+(\S+)", text, re.MULTILINE)
+            if match:
+                internal["go"].add(match.group(1).strip('"'))
+        else:
+            # name = "..." inside [package] or [lib]
+            for section in re.finditer(r"^\[(package|lib)\]([^\[]*)", text, re.MULTILINE):
+                match = re.search(r'^\s*name\s*=\s*"([^"]+)"', section.group(2), re.MULTILINE)
+                if match:
+                    internal["rust"].add(match.group(1).replace("-", "_"))
+
+    return internal
+
+
+def _iter_manifests(repo_path: Path, names: tuple[str, ...]):
+    """Yield project manifest files (go.mod, Cargo.toml, ...) outside skipped directories."""
+    for name in names:
+        for path in repo_path.rglob(name):
+            rel_parts = path.relative_to(repo_path).parts
+            if not any(part in SKIP_DIRS for part in rel_parts):
+                yield path
+
+
+def _is_internal_import(source: str, lang: str, internal_modules: dict[str, set[str]]) -> bool:
+    """Check if an import source refers to the repo's own code."""
+    modules = internal_modules.get(lang)
+    if not modules:
+        return False
+    if lang in ("python", "rust"):
+        return source in modules
+    sep = "/" if lang == "go" else "."
+    return any(source == m or source.startswith(m + sep) for m in modules)
+
+
+def _collect_declared_packages(root: Node) -> set[str]:
+    """Collect Java package / C# namespace names declared in a file."""
+    packages: set[str] = set()
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.type == "package_declaration":
+            for child in node.named_children:
+                if child.type in ("scoped_identifier", "identifier"):
+                    packages.add(child.text.decode("utf-8"))
+        elif node.type in ("namespace_declaration", "file_scoped_namespace_declaration"):
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                packages.add(name_node.text.decode("utf-8"))
+        # Packages/namespaces only appear at the top level or nested in namespaces
+        if node.type in ("program", "compilation_unit", "declaration_list") or \
+                node.type == "namespace_declaration":
+            stack.extend(node.named_children)
+    return packages
 
 
 def _find_functions_in_file(root: Node, lang: str) -> list[tuple[str, Node]]:
@@ -305,8 +489,73 @@ def _walk_for_funcs(
                         _walk_for_funcs(child, lang, results, class_stack)
             return
 
+    elif lang in LANG_SPECS:
+        spec = LANG_SPECS[lang]
+        if node.type in spec["containers"]:
+            cls_name = _container_name(node) or "<class>"
+            body = node.child_by_field_name("body")
+            if body:
+                for child in body.children:
+                    _walk_for_funcs(child, lang, results, class_stack + [cls_name])
+            return
+
+        if node.type in spec["functions"]:
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                func_name = name_node.text.decode("utf-8")
+                # Go methods are declared at top level; qualify them by receiver type
+                owner = None
+                if lang == "go" and node.type == "method_declaration":
+                    owner = _go_receiver_type(node)
+                qualified = ".".join(
+                    class_stack + ([owner] if owner else []) + [func_name]
+                )
+                results.append((qualified, node))
+            body = node.child_by_field_name("body")
+            if body:
+                for child in body.children:
+                    _walk_for_funcs(child, lang, results, class_stack)
+            return
+
     for child in node.children:
         _walk_for_funcs(child, lang, results, class_stack)
+
+
+def _container_name(node: Node) -> str | None:
+    """Name of a class-like node. Rust impl blocks are named after the implemented type."""
+    if node.type == "impl_item":
+        type_node = node.child_by_field_name("type")
+        return _base_type_name(type_node)
+    name_node = node.child_by_field_name("name")
+    return name_node.text.decode("utf-8") if name_node else None
+
+
+def _base_type_name(type_node: Node | None) -> str | None:
+    """Strip generics/pointers/paths from a type: `*Foo`, `Foo[T]`, `a::Foo<T>` → "Foo"."""
+    if type_node is None:
+        return None
+    if type_node.named_child_count == 0:
+        return type_node.text.decode("utf-8")
+    for field in ("type", "name"):
+        inner = type_node.child_by_field_name(field)
+        if inner is not None:
+            return _base_type_name(inner)
+    for child in type_node.named_children:
+        name = _base_type_name(child)
+        if name:
+            return name
+    return None
+
+
+def _go_receiver_type(method_node: Node) -> str | None:
+    """Get the receiver type of a Go method: `func (s *Server) Run()` → "Server"."""
+    receiver = method_node.child_by_field_name("receiver")
+    if receiver is None:
+        return None
+    for param in receiver.named_children:
+        if param.type == "parameter_declaration":
+            return _base_type_name(param.child_by_field_name("type"))
+    return None
 
 
 def _get_direct_calls(func_node: Node, lang: str) -> dict[str, tuple[bool, int, str | None]]:
@@ -340,6 +589,10 @@ def _collect_calls(node: Node, calls: list, lang: str) -> None:
     if lang == "python":
         is_func_def = node.type == "function_definition"
         is_call = node.type == "call"
+    elif lang in LANG_SPECS:
+        spec = LANG_SPECS[lang]
+        is_func_def = node.type in spec["functions"] or node.type in spec["nested"]
+        is_call = node.type in spec["calls"]
     else:
         is_func_def = node.type in (
             "function_declaration", "function", "arrow_function", "method_definition"
@@ -359,7 +612,7 @@ def _collect_calls(node: Node, calls: list, lang: str) -> None:
             calls.append((name, is_returned, row, receiver))
 
     # Detect JSX component usage as calls (React/Next.js)
-    if lang in ("javascript", "typescript", "tsx"):
+    if lang in JS_LANGS:
         if node.type in ("jsx_self_closing_element", "jsx_opening_element"):
             component_name = _extract_jsx_component_name(node)
             if component_name and _is_custom_component(component_name):
@@ -379,14 +632,48 @@ def _extract_callee_info(call_node: Node, lang: str) -> tuple[str | None, str | 
         - self.helper() → ("helper", "self")
         - os.path.join() → ("join", "os.path")
         - helper() → ("helper", None)
+        - HashMap::new() → ("new", "HashMap")   (Rust)
+        - new Foo() → ("Foo", None)              (Java/C# constructor)
     """
+    # Java: obj.method(...) has object/name fields instead of a function field
+    if call_node.type == "method_invocation":
+        name_node = call_node.child_by_field_name("name")
+        receiver = _get_full_receiver_name(call_node.child_by_field_name("object"))
+        return (name_node.text.decode("utf-8") if name_node else None, receiver)
+
+    # Java/C#: `new Foo()` is a call to Foo's constructor
+    if call_node.type == "object_creation_expression":
+        return (_base_type_name(call_node.child_by_field_name("type")), None)
+
     func = call_node.child_by_field_name("function")
 
     if func is None:
         return (None, None)
 
+    # Rust turbofish `foo::<T>()` / `x.foo::<T>()`: unwrap to the inner function
+    if func.type == "generic_function":
+        inner = func.child_by_field_name("function")
+        func = inner if inner is not None else func
+
     if func.type == "identifier":
         return (func.text.decode("utf-8"), None)
+
+    # C# generic call `Foo<T>()`
+    if func.type == "generic_name":
+        return (_base_type_name(func), None)
+
+    member_fields = {
+        "selector_expression": ("operand", "field"),         # Go
+        "field_expression": ("value", "field"),              # Rust
+        "scoped_identifier": ("path", "name"),               # Rust
+        "member_access_expression": ("expression", "name"),  # C#
+    }
+    if func.type in member_fields:
+        obj_field, name_field = member_fields[func.type]
+        name_node = func.child_by_field_name(name_field)
+        method_name = _base_type_name(name_node) if name_node else None
+        receiver = _get_full_receiver_name(func.child_by_field_name(obj_field))
+        return (method_name, receiver)
 
     if func.type == "attribute" and lang == "python":
         attr = func.child_by_field_name("attribute")
@@ -415,17 +702,24 @@ def _get_full_receiver_name(node: Node | None) -> str | None:
     if node is None:
         return None
 
-    if node.type == "identifier":
+    if node.type in ("identifier", "type_identifier", "package_identifier"):
         return node.text.decode("utf-8")
 
-    if node.type in ("attribute", "member_expression"):
+    # (object field, attribute field) for member-access-like nodes
+    member_fields = {
+        "attribute": ("object", "attribute"),                # Python
+        "member_expression": ("object", "property"),         # JS/TS
+        "selector_expression": ("operand", "field"),         # Go
+        "field_access": ("object", "field"),                 # Java
+        "field_expression": ("value", "field"),              # Rust
+        "scoped_identifier": ("path", "name"),               # Rust
+        "member_access_expression": ("expression", "name"),  # C#
+    }
+    if node.type in member_fields:
         # For chained attributes like os.path, recursively build the full name
-        if node.type == "attribute":
-            obj = node.child_by_field_name("object")
-            attr = node.child_by_field_name("attribute")
-        else:  # member_expression
-            obj = node.child_by_field_name("object")
-            attr = node.child_by_field_name("property")
+        obj_field, attr_field = member_fields[node.type]
+        obj = node.child_by_field_name(obj_field)
+        attr = node.child_by_field_name(attr_field)
 
         obj_name = _get_full_receiver_name(obj)
         attr_name = attr.text.decode("utf-8") if attr else None
@@ -434,9 +728,9 @@ def _get_full_receiver_name(node: Node | None) -> str | None:
             return f"{obj_name}.{attr_name}"
         return obj_name or attr_name
 
-    # For 'this' keyword in JS/TS
-    if node.type == "this":
-        return "this"
+    # Keywords referring to the current object/module (this, self, super, crate, base)
+    if node.type in ("this", "self", "super", "crate", "base"):
+        return node.text.decode("utf-8")
 
     return None
 
@@ -457,15 +751,123 @@ def _collect_file_imports(root: Node, lang: str) -> dict[str, str]:
         - import { get } from 'lodash' → {"get": "lodash"}
         - import * as path from 'path' → {"path": "path"}
         - import './local' → skipped (relative import)
+
+        Go / Java / Rust / C# (source is the full import path, so it can be
+        matched against the repo's own modules):
+        - import "github.com/a/pkg" → {"pkg": "github.com/a/pkg"}
+        - import java.util.List; → {"List": "java.util.List"}
+        - use serde::{Serialize}; → {"Serialize": "serde"}
+        - using IO = System.IO; → {"IO": "System.IO"}
     """
     imports: dict[str, str] = {}
 
     if lang == "python":
         _collect_python_imports(root, imports)
-    elif lang in ("javascript", "typescript", "tsx"):
+    elif lang in JS_LANGS:
         _collect_js_imports(root, imports)
+    elif lang == "go":
+        _collect_go_imports(root, imports)
+    elif lang == "java":
+        _collect_java_imports(root, imports)
+    elif lang == "rust":
+        _collect_rust_imports(root, imports)
+    elif lang == "csharp":
+        _collect_csharp_imports(root, imports)
 
     return imports
+
+
+def _collect_go_imports(root: Node, imports: dict[str, str]) -> None:
+    """Collect Go imports: the local name is the alias or the last path segment."""
+    for node in _iter_descendants(root, "import_spec"):
+        path_node = node.child_by_field_name("path")
+        if path_node is None:
+            continue
+        path = path_node.text.decode("utf-8").strip('"`')
+        name_node = node.child_by_field_name("name")
+        if name_node is not None:
+            local = name_node.text.decode("utf-8")
+            if local in ("_", "."):
+                continue
+        else:
+            segments = path.split("/")
+            local = segments[-1]
+            # Major version suffix: github.com/a/pkg/v2 is imported as `pkg`
+            if re.fullmatch(r"v\d+", local) and len(segments) > 1:
+                local = segments[-2]
+        imports[local] = path
+
+
+def _collect_java_imports(root: Node, imports: dict[str, str]) -> None:
+    """Collect Java imports (classes and static members). Wildcards bind no known names."""
+    for node in root.named_children:
+        if node.type != "import_declaration":
+            continue
+        if any(child.type == "asterisk" for child in node.children):
+            continue
+        for child in node.named_children:
+            if child.type in ("scoped_identifier", "identifier"):
+                full = child.text.decode("utf-8")
+                imports[full.split(".")[-1]] = full
+
+
+def _collect_rust_imports(root: Node, imports: dict[str, str]) -> None:
+    """Collect Rust `use` declarations, mapping each bound name to its root crate."""
+    for node in _iter_descendants(root, "use_declaration"):
+        arg = node.child_by_field_name("argument")
+        if arg is not None:
+            _collect_rust_use_tree(arg, None, imports)
+
+
+def _collect_rust_use_tree(node: Node, root_crate: str | None, imports: dict[str, str]) -> None:
+    """Walk a Rust use tree (`a::b::{c, d as e}`) recording name → root crate."""
+    def leftmost(n: Node | None) -> str | None:
+        while n is not None and n.type == "scoped_identifier":
+            n = n.child_by_field_name("path")
+        return n.text.decode("utf-8") if n is not None else None
+
+    if node.type in ("identifier", "scoped_identifier"):
+        crate = root_crate or leftmost(node)
+        name = node.text.decode("utf-8").split("::")[-1]
+        if crate not in ("crate", "self", "super") and name != "self":
+            imports[name] = crate
+    elif node.type == "use_as_clause":
+        path = node.child_by_field_name("path")
+        alias = node.child_by_field_name("alias")
+        crate = root_crate or leftmost(path)
+        if alias is not None and crate not in ("crate", "self", "super"):
+            imports[alias.text.decode("utf-8")] = crate
+    elif node.type == "scoped_use_list":
+        crate = root_crate or leftmost(node.child_by_field_name("path"))
+        use_list = node.child_by_field_name("list")
+        if use_list is not None:
+            _collect_rust_use_tree(use_list, crate, imports)
+    elif node.type == "use_list":
+        for child in node.named_children:
+            _collect_rust_use_tree(child, root_crate, imports)
+
+
+def _collect_csharp_imports(root: Node, imports: dict[str, str]) -> None:
+    """Collect C# using aliases. Plain `using System;` binds no names, so it's skipped."""
+    for node in _iter_descendants(root, "using_directive"):
+        alias = node.child_by_field_name("name")
+        if alias is None:
+            continue
+        for child in node.named_children:
+            if child is not alias and child.type in ("qualified_name", "identifier"):
+                imports[alias.text.decode("utf-8")] = child.text.decode("utf-8")
+                break
+
+
+def _iter_descendants(root: Node, node_type: str):
+    """Yield all descendants of the given type, without descending into matches."""
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.type == node_type:
+            yield node
+            continue
+        stack.extend(reversed(node.named_children))
 
 
 def _collect_python_imports(node: Node, imports: dict[str, str]) -> None:
@@ -621,7 +1023,9 @@ def _is_external_receiver(receiver: str | None, imports: dict[str, str], lang: s
     # Instance method receivers are not external
     if lang == "python" and receiver in ("self", "cls"):
         return False
-    if lang in ("javascript", "typescript", "tsx") and receiver in ("this",):
+    if lang in JS_LANGS and receiver in ("this",):
+        return False
+    if lang in LANG_SPECS and receiver.split(".")[0] in LANG_SPECS[lang]["instance"]:
         return False
     # Also handle this.something - it's still an instance method
     if receiver.startswith("this."):

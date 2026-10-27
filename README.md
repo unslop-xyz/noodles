@@ -143,12 +143,18 @@ The call graph builder uses tree-sitter for AST parsing. Currently supported:
 | `.jsx`    | JavaScript |
 | `.ts`     | TypeScript |
 | `.tsx`    | TSX        |
+| `.go`     | Go         |
+| `.java`   | Java       |
+| `.rs`     | Rust       |
+| `.cs`     | C#         |
 
 React/Next.js JSX component usage (`<MyComponent />`) is detected as function calls, so component hierarchies appear correctly in the call graph.
 
+Methods are qualified by their type (`Server.Run` for a Go method on `*Server`, `Store.open` inside `impl Store`), and `new Foo()` in Java/C# counts as a call to `Foo`'s constructor. Imports of the repo's own code are recognised from `go.mod`, `Cargo.toml`, Java packages / C# namespaces, and top-level Python packages, so cross-module calls are kept while calls into external libraries are filtered out.
+
 ### Not yet supported
 
-- **Other languages** - Requires adding tree-sitter grammar and function detection logic
+- **Other languages** - Add the extension to `EXTENSION_TO_LANG` and an entry to `LANG_SPECS` (node types for classes, functions, closures and calls) in `call_graph_builder.py`, plus an import collector if the language has one
 
 ## Limitations
 

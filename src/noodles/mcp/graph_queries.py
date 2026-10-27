@@ -323,7 +323,7 @@ def make_short_id(node_id: str) -> str:
     # Remove extension from last part
     if parts:
         last = parts[-1]
-        for ext in (".py", ".js", ".ts", ".tsx", ".jsx"):
+        for ext in (".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".java", ".rs", ".cs"):
             if last.endswith(ext):
                 parts[-1] = last[: -len(ext)]
                 break
