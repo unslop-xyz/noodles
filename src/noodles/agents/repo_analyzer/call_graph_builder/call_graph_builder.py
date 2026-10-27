@@ -196,13 +196,14 @@ def _iter_source_files(repo_path: Path):
             continue
         if file_path.suffix not in EXTENSION_TO_LANG:
             continue
-        # Skip non-source directories
-        if any(part in SKIP_DIRS for part in file_path.parts):
+        rel_path = file_path.relative_to(repo_path)
+        # Skip non-source directories (relative to the repo, so a repo that itself
+        # lives under e.g. `.claude/` or `build/` is still analyzed)
+        if any(part in SKIP_DIRS for part in rel_path.parts):
             continue
         # Skip files matched by .gitignore
         if gitignore_spec is not None:
-            rel = str(file_path.relative_to(repo_path))
-            if gitignore_spec.match_file(rel):
+            if gitignore_spec.match_file(rel_path.as_posix()):
                 continue
         yield file_path
 
