@@ -68,6 +68,8 @@ def build_call_graph(
     name_to_indices: dict[str, list[str]] = defaultdict(list)
     # Maps rel_path -> dict of imports (local_name -> source_module)
     file_imports: dict[str, dict[str, str]] = {}
+    # Maps rel_path -> language, used to filter out imports of the repo's own code
+    file_langs: dict[str, str] = {}
 
     for file_path in _iter_source_files(repo_path):
         lang = EXTENSION_TO_LANG[file_path.suffix]
@@ -86,6 +88,7 @@ def build_call_graph(
 
         # Collect imports for this file
         file_imports[rel_path] = _collect_file_imports(tree.root_node, lang)
+        file_langs[rel_path] = lang
 
         funcs = _find_functions_in_file(tree.root_node, lang)
         for qualified_name, func_node in funcs:
@@ -97,6 +100,15 @@ def build_call_graph(
             # Register by bare name (last component) for call resolution
             bare_name = qualified_name.split(".")[-1]
             name_to_indices[bare_name].append(index)
+
+    # Imports that resolve to the repo's own code are internal, not external libraries
+    internal_modules = _find_internal_modules(repo_path)
+    for rel_path, imports in file_imports.items():
+        lang = file_langs[rel_path]
+        file_imports[rel_path] = {
+            name: src for name, src in imports.items()
+            if not _is_internal_import(src, lang, internal_modules)
+        }
 
     # Phase 2: Build call graph
     call_graph_map: dict[str, list[str]] = {}
@@ -217,6 +229,33 @@ def _load_gitignore(repo_path: Path) -> pathspec.PathSpec | None:
         return pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
     except OSError:
         return None
+
+
+def _find_internal_modules(repo_path: Path) -> dict[str, set[str]]:
+    """Find module names that belong to the repo itself, per language.
+
+    - python: top-level packages/modules at the repo root or under src/
+    """
+    internal: dict[str, set[str]] = {"python": set()}
+
+    for base in (repo_path, repo_path / "src"):
+        if not base.is_dir():
+            continue
+        for child in base.iterdir():
+            if child.is_dir() and (child / "__init__.py").is_file():
+                internal["python"].add(child.name)
+            elif child.is_file() and child.suffix == ".py":
+                internal["python"].add(child.stem)
+
+    return internal
+
+
+def _is_internal_import(source: str, lang: str, internal_modules: dict[str, set[str]]) -> bool:
+    """Check if an import source refers to the repo's own code."""
+    modules = internal_modules.get(lang)
+    if not modules:
+        return False
+    return source in modules
 
 
 def _find_functions_in_file(root: Node, lang: str) -> list[tuple[str, Node]]:
